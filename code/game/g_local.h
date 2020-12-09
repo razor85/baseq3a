@@ -328,6 +328,9 @@ struct gclient_s {
 	int			frameOffset;
 	int			lastUpdateFrame;
 
+	// Last time the client auto jumped to swing.
+	int swingJumpTime;
+
 	// hitsounds
 	struct {
 		int		team;
@@ -345,6 +348,8 @@ struct gclient_s {
 
 #define NUM_SPAWN_SPOTS MAX_GENTITIES
 #define SPAWN_SPOT_INTERMISSION NUM_SPAWN_SPOTS-1
+
+#define	MAX_SWING_POINTS 8192
 
 typedef struct {
 	struct gclient_s	*clients;		// [maxclients]
@@ -441,6 +446,10 @@ typedef struct {
 
 	// unlagged
 	int			frameStartTime;
+
+	// Store swing points
+	unsigned int numSwingPoints;
+	vec3_t swingPoints[MAX_SWING_POINTS];
 
 } level_locals_t;
 

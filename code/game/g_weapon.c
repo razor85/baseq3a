@@ -603,6 +603,7 @@ void Weapon_HookFree (gentity_t *ent)
 {
 	ent->parent->client->hook = NULL;
 	ent->parent->client->ps.pm_flags &= ~PMF_GRAPPLE_PULL;
+	ent->parent->client->ps.grapplePulling = qfalse;
 	G_FreeEntity( ent );
 }
 

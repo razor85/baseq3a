@@ -17,6 +17,13 @@ void SP_info_camp( gentity_t *self ) {
 	G_SetOrigin( self, self->s.origin );
 }
 
+/*QUAKED info_swing_point (0 1 0) (-16 -16 -16) (16 16 16)
+Used as a positional target for swinging web.
+*/
+void SP_info_swing_point( gentity_t *self ) {
+	G_SetOrigin( self, self->s.origin );
+}
+
 
 /*QUAKED info_null (0 0.5 0) (-4 -4 -4) (4 4 4)
 Used as a positional target for calculations in the utilities (spotlights, etc), but removed during gameplay.

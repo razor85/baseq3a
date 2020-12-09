@@ -449,11 +449,18 @@ int CG_WaterLevel(centity_t *cent) {
 
 	anim = cent->currentState.legsAnim & ~ANIM_TOGGLEBIT;
 
+	// Nightz - there is no crouch
+  viewheight = DEFAULT_VIEWHEIGHT;
+
+	/*
 	if ( anim == LEGS_WALKCR || anim == LEGS_IDLECR ) {
 		viewheight = CROUCH_VIEWHEIGHT;
 	} else {
 		viewheight = DEFAULT_VIEWHEIGHT;
 	}
+	*/
+
+	// End Nightz
 
 	//
 	// get waterlevel, accounting for ducking

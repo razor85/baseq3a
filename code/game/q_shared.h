@@ -859,6 +859,7 @@ typedef struct {
 #define	MAX_PERSISTANT			16
 #define	MAX_POWERUPS			16
 #define	MAX_WEAPONS				16		
+#define	MAX_SMDF_FLAGS 16
 
 #define	MAX_PS_EVENTS			2
 
@@ -903,6 +904,10 @@ typedef struct playerState_s {
 								// used to twist the legs during strafing
 
 	vec3_t		grapplePoint;	// location of grapple to pull towards if PMF_GRAPPLE_PULL
+	float     grappleLength;
+	int       grapplePulling;
+	int       grappleTime;
+	vec3_t		grapplePushForce;
 
 	int			eFlags;			// copied to entityState_t->eFlags
 
@@ -930,6 +935,7 @@ typedef struct playerState_s {
 	int			stats[MAX_STATS];
 	int			persistant[MAX_PERSISTANT];	// stats that aren't cleared on death
 	int			powerups[MAX_POWERUPS];	// level.time that the powerup runs out
+	int			smdfFlags[MAX_SMDF_FLAGS];	// level.time that the powerup runs out
 	int			ammo[MAX_WEAPONS];
 
 	int			generic1;
@@ -969,6 +975,9 @@ typedef struct playerState_s {
 #define BUTTON_FOLLOWME		1024
 
 #define	BUTTON_ANY			2048			// any key whatsoever
+
+// Nightz - SMDF Buttons
+#define	BUTTON_SWING 4096  // button12
 
 #define	MOVE_RUN			120			// if forwardmove or rightmove are >= MOVE_RUN,
 										// then BUTTON_WALKING should be set
@@ -1048,6 +1057,7 @@ typedef struct entityState_s {
 
 	// for players
 	int		powerups;		// bit flags
+	int		smdfFlags;		// bit flags
 	int		weapon;			// determines weapon and flash model, etc
 	int		legsAnim;		// mask off ANIM_TOGGLEBIT
 	int		torsoAnim;		// mask off ANIM_TOGGLEBIT

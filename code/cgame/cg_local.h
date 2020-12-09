@@ -386,6 +386,9 @@ typedef struct {
 	vec3_t			bodyColor;
 	vec3_t			legsColor;
 
+	// Nightz - Auxiliary
+	vec3_t      tag_rhand, tag_lhand;
+
 } clientInfo_t;
 
 
@@ -1146,6 +1149,16 @@ typedef struct {
 	float			cursorY;
 } cgs_t;
 
+// Nightz - IQM
+typedef struct {
+	char name[MAX_QPATH];
+  unsigned int first_frame;
+	unsigned int num_frames;
+  float framerate;
+  unsigned int flags;
+} animationData_t;
+// End Nightz
+
 //==============================================================================
 
 extern	cgs_t			cgs;
@@ -1707,6 +1720,10 @@ int			trap_R_LerpTag( orientation_t *tag, clipHandle_t mod, int startFrame, int 
 					   float frac, const char *tagName );
 void		trap_R_RemapShader( const char *oldShader, const char *newShader, const char *timeOffset );
 qboolean	trap_R_inPVS( const vec3_t p1, const vec3_t p2 );
+
+// Nightz - IQM
+int trap_R_GetAnimations( qhandle_t model, animationData_t* data, int* numAnims );
+// End Nightz
 
 // The glconfig_t will not change during the life of a cgame.
 // If it needs to change, the entire cgame will be restarted, because

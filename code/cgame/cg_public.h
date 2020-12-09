@@ -161,7 +161,10 @@ typedef enum {
 	CG_CEIL,
 	CG_TESTPRINTINT,
 	CG_TESTPRINTFLOAT,
-	CG_ACOS
+	CG_ACOS,
+
+	CG_GET_ANIMATIONS = 120
+
 } cgameImport_t;
 
 

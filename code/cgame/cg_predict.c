@@ -699,12 +699,14 @@ static int CG_IsUnacceptableError( playerState_t *ps, playerState_t *pps, qboole
 	}
 
 	// forward gesture animation
+	/*
 	if ( pps->torsoAnim != ps->torsoAnim && (ps->torsoAnim & ~ANIM_TOGGLEBIT ) == TORSO_GESTURE ) {
 		for ( n = 0 ; n < NUM_SAVED_STATES; n++ ) {
 			cg.savedPmoveStates[ n ].torsoAnim = ps->torsoAnim;
 			cg.savedPmoveStates[ n ].torsoTimer = ps->torsoTimer;
 		}
 	}
+	*/
 
 	if ( pps->legsTimer != ps->legsTimer ||	pps->legsAnim != ps->legsAnim ||
 		pps->torsoTimer != ps->torsoTimer || pps->torsoAnim != ps->torsoAnim ||
@@ -715,6 +717,13 @@ static int CG_IsUnacceptableError( playerState_t *ps, playerState_t *pps, qboole
 	VectorSubtract( pps->grapplePoint, ps->grapplePoint, delta );
 	if( VectorLengthSquared( delta ) > 0.01f * 0.01f )
 		return 6;
+
+	if ( pps->grappleLength - ps->grappleLength > 0.01f )
+		return 6;
+
+	if ( pps->grapplePulling != ps->grapplePulling )
+		return 6;
+
 
 	// check/update eFlags if needed
 	v0 = pps->eFlags & EF_NOPREDICT;

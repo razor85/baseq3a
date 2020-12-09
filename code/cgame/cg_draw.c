@@ -2016,10 +2016,6 @@ static void CG_DrawCrosshair( void ) {
 		return;
 	}
 
-	if ( cg.renderingThirdPerson ) {
-		return;
-	}
-
 	// set color based on health
 	if ( cg_crosshairHealth.integer ) {
 		vec4_t		hcolor;
@@ -2052,6 +2048,16 @@ static void CG_DrawCrosshair( void ) {
 
 	hShader = cgs.media.crosshairShader[ ca % NUM_CROSSHAIRS ];
 
+	/* nightz new crosshair */
+  trace_t		trace;
+	vec3_t		start, end;
+	int			  content;
+	content = trap_CM_PointContents( trace.endpos, 0 );
+	//if ( !(content & CONTENTS_FOG) && ( trace.entityNum < MAX_CLIENTS ) ) 
+	//	hShader = cgs.media.redcross;	
+	//else 
+		hShader = cgs.media.crosshairShader[ ca % NUM_CROSSHAIRS ];	
+	
 	trap_R_DrawStretchPic( x + cg.refdef.x + 0.5 * (cg.refdef.width - w) - cgs.screenXBias,
 		y + cg.refdef.y + 0.5 * (cg.refdef.height - h) - cgs.screenYBias,
 		w, h, 0, 0, 1, 1, hShader );

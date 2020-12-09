@@ -1,0 +1,16 @@
+/build/win32-msvc/.vs/*
+/build/win32-msvc/Win32/Debug*/*
+/build/win32-msvc/Win32/Release*/*
+/build/win32-msvc/x64/Debug*/*
+/build/win32-msvc/x64/Release*/*
+/build/win32-msvc/x64/*.obj
+/build/win32-msvc/*.htm
+/build/win32-qvm/*/*/*.asm
+/build/win32-qvm/*/*/*.jts
+/build/win32-qvm/*/*/*.qvm
+/build/win32-qvm/*/*.asm
+/build/win32-qvm/*/*.jts
+/build/win32-qvm/*/*.qvm
+/build/win32-qvm/*/*/*.map
+*.vcxproj.filters
+*.vcxproj.user

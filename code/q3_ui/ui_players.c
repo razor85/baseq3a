@@ -133,7 +133,8 @@ UI_ForceLegsAnim
 static void UI_ForceLegsAnim( playerInfo_t *pi, int anim ) {
 	pi->legsAnim = ( ( pi->legsAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT ) | anim;
 
-	if ( anim == LEGS_JUMP ) {
+	// if ( anim == BOTH_JUMP ) {
+	if ( anim == BOTH_JUMP ) {
 		pi->legsAnimationTimer = UI_TIMER_JUMP;
 	}
 }
@@ -161,11 +162,12 @@ UI_ForceTorsoAnim
 static void UI_ForceTorsoAnim( playerInfo_t *pi, int anim ) {
 	pi->torsoAnim = ( ( pi->torsoAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT ) | anim;
 
-	if ( anim == TORSO_GESTURE ) {
-		pi->torsoAnimationTimer = UI_TIMER_GESTURE;
-	}
+	// if ( anim == TORSO_GESTURE ) {
+	// 	pi->torsoAnimationTimer = UI_TIMER_GESTURE;
+	// }
 
-	if ( anim == TORSO_ATTACK || anim == TORSO_ATTACK2 ) {
+	// if ( anim == TORSO_ATTACK || anim == TORSO_ATTACK2 ) {
+	if ( anim == TORSO_RPUNCH || anim == TORSO_LPUNCH ) {
 		pi->torsoAnimationTimer = UI_TIMER_ATTACK;
 	}
 }
@@ -196,6 +198,9 @@ static void UI_TorsoSequencing( playerInfo_t *pi ) {
 
 	currentAnim = pi->torsoAnim & ~ANIM_TOGGLEBIT;
 
+	// Nightz - TODO: Redo this.
+
+	/*
 	if ( pi->weapon != pi->currentWeapon ) {
 		if ( currentAnim != TORSO_DROP ) {
 			pi->torsoAnimationTimer = UI_TIMER_WEAPON_SWITCH;
@@ -228,6 +233,7 @@ static void UI_TorsoSequencing( playerInfo_t *pi ) {
 		UI_SetTorsoAnim( pi, TORSO_STAND );
 		return;
 	}
+	*/
 }
 
 
@@ -242,21 +248,21 @@ static void UI_LegsSequencing( playerInfo_t *pi ) {
 	currentAnim = pi->legsAnim & ~ANIM_TOGGLEBIT;
 
 	if ( pi->legsAnimationTimer > 0 ) {
-		if ( currentAnim == LEGS_JUMP ) {
+		if ( currentAnim == BOTH_JUMP ) {
 			jumpHeight = JUMP_HEIGHT * sin( M_PI * ( UI_TIMER_JUMP - pi->legsAnimationTimer ) / UI_TIMER_JUMP );
 		}
 		return;
 	}
 
-	if ( currentAnim == LEGS_JUMP ) {
-		UI_ForceLegsAnim( pi, LEGS_LAND );
+	if ( currentAnim == BOTH_JUMP ) {
+		UI_ForceLegsAnim( pi, BOTH_LAND );
 		pi->legsAnimationTimer = UI_TIMER_LAND;
 		jumpHeight = 0;
 		return;
 	}
 
-	if ( currentAnim == LEGS_LAND ) {
-		UI_SetLegsAnim( pi, LEGS_IDLE );
+	if ( currentAnim == BOTH_LAND ) {
+		UI_SetLegsAnim( pi, BOTH_IDLE );
 		return;
 	}
 }
@@ -415,7 +421,7 @@ static void UI_PlayerAnimation( playerInfo_t *pi, int *legsOld, int *legs, float
 
 	UI_LegsSequencing( pi );
 
-	if ( pi->legs.yawing && ( pi->legsAnim & ~ANIM_TOGGLEBIT ) == LEGS_IDLE ) {
+	if ( pi->legs.yawing && ( pi->legsAnim & ~ANIM_TOGGLEBIT ) == BOTH_IDLE ) {
 		UI_RunLerpFrame( pi, &pi->legs, LEGS_TURN );
 	} else {
 		UI_RunLerpFrame( pi, &pi->legs, pi->legsAnim );
@@ -563,8 +569,8 @@ static void UI_PlayerAngles( playerInfo_t *pi, vec3_t legs[3], vec3_t torso[3], 
 	// --------- yaw -------------
 
 	// allow yaw to drift a bit
-	if ( ( pi->legsAnim & ~ANIM_TOGGLEBIT ) != LEGS_IDLE 
-		|| ( pi->torsoAnim & ~ANIM_TOGGLEBIT ) != TORSO_STAND  ) {
+	if ( ( pi->legsAnim & ~ANIM_TOGGLEBIT ) != BOTH_IDLE 
+		|| ( pi->torsoAnim & ~ANIM_TOGGLEBIT ) != BOTH_IDLE ) {
 		// if not standing still, always point all in the same direction
 		pi->torso.yawing = qtrue;	// always center
 		pi->torso.pitching = qtrue;	// always center
@@ -647,14 +653,16 @@ float	UI_MachinegunSpinAngle( playerInfo_t *pi ) {
 	}
 
 	torsoAnim = pi->torsoAnim  & ~ANIM_TOGGLEBIT;
-	if( torsoAnim == TORSO_ATTACK2 ) {
-		torsoAnim = TORSO_ATTACK;
-	}
-	if ( pi->barrelSpinning == !(torsoAnim == TORSO_ATTACK) ) {
-		pi->barrelTime = dp_realtime;
-		pi->barrelAngle = AngleMod( angle );
-		pi->barrelSpinning = !!(torsoAnim == TORSO_ATTACK);
-	}
+	// Nightz - no double.
+	// if( torsoAnim == TORSO_ATTACK2 ) {
+	// 	torsoAnim = TORSO_ATTACK;
+	// }
+	// if ( pi->barrelSpinning == !(torsoAnim == TORSO_ATTACK) ) {
+	// 	pi->barrelTime = dp_realtime;
+	// 	pi->barrelAngle = AngleMod( angle );
+	// 	pi->barrelSpinning = !!(torsoAnim == TORSO_ATTACK);
+	// }
+	// End Nightz
 
 	return angle;
 }
@@ -986,6 +994,8 @@ static qboolean UI_ParseAnimationFile( const char *filename, animation_t *animat
 
 		token = COM_Parse( &text_p );
 		if ( !token[0] ) {
+			// Nightz - no gesture
+			/*
 			if ( i >= TORSO_GETFLAG && i <= TORSO_NEGATIVE ) {
 				animations[i].firstFrame = animations[TORSO_GESTURE].firstFrame;
 				animations[i].frameLerp = animations[TORSO_GESTURE].frameLerp;
@@ -996,16 +1006,22 @@ static qboolean UI_ParseAnimationFile( const char *filename, animation_t *animat
 				animations[i].flipflop = qfalse;
 				continue;
 			}
+			*/
+			// End Nightz
 			break;
 		}
 		animations[i].firstFrame = atoi( token );
 		// leg only frames are adjusted to not count the upper body only frames
+		// Nightz - no crouch
+		/*
 		if ( i == LEGS_WALKCR ) {
 			skip = animations[LEGS_WALKCR].firstFrame - animations[TORSO_GESTURE].firstFrame;
 		}
 		if ( i >= LEGS_WALKCR ) {
 			animations[i].firstFrame -= skip;
 		}
+		*/
+		// End Nightz
 
 		token = COM_Parse( &text_p );
 		if ( !token[0] ) {
@@ -1203,7 +1219,7 @@ void UI_PlayerInfo_SetInfo( playerInfo_t *pi, int legsAnim, int torsoAnim, vec3_
 
 	// leg animation
 	currentAnim = pi->legsAnim & ~ANIM_TOGGLEBIT;
-	if ( legsAnim != LEGS_JUMP && ( currentAnim == LEGS_JUMP || currentAnim == LEGS_LAND ) ) {
+	if ( legsAnim != BOTH_JUMP && ( currentAnim == BOTH_JUMP || currentAnim == BOTH_LAND ) ) {
 		pi->pendingLegsAnim = legsAnim;
 	}
 	else if ( legsAnim != currentAnim ) {
@@ -1213,15 +1229,16 @@ void UI_PlayerInfo_SetInfo( playerInfo_t *pi, int legsAnim, int torsoAnim, vec3_
 	}
 
 	// torso animation
-	if ( torsoAnim == TORSO_STAND || torsoAnim == TORSO_STAND2 ) {
+	if ( torsoAnim == BOTH_IDLE ) {
 		if ( weaponNum == WP_NONE || weaponNum == WP_GAUNTLET ) {
-			torsoAnim = TORSO_STAND2;
+			torsoAnim = BOTH_IDLE;
 		}
 		else {
-			torsoAnim = TORSO_STAND;
+			torsoAnim = BOTH_IDLE;
 		}
 	}
 
+	/*
 	if ( torsoAnim == TORSO_ATTACK || torsoAnim == TORSO_ATTACK2 ) {
 		if ( weaponNum == WP_NONE || weaponNum == WP_GAUNTLET ) {
 			torsoAnim = TORSO_ATTACK2;
@@ -1232,9 +1249,11 @@ void UI_PlayerInfo_SetInfo( playerInfo_t *pi, int legsAnim, int torsoAnim, vec3_
 		pi->muzzleFlashTime = dp_realtime + UI_TIMER_MUZZLE_FLASH;
 		//FIXME play firing sound here
 	}
+	*/
 
 	currentAnim = pi->torsoAnim & ~ANIM_TOGGLEBIT;
 
+	/*
 	if ( weaponNum != pi->currentWeapon || currentAnim == TORSO_RAISE || currentAnim == TORSO_DROP ) {
 		pi->pendingTorsoAnim = torsoAnim;
 	}
@@ -1242,6 +1261,11 @@ void UI_PlayerInfo_SetInfo( playerInfo_t *pi, int legsAnim, int torsoAnim, vec3_
 		pi->pendingTorsoAnim = torsoAnim;
 	}
 	else if ( torsoAnim != currentAnim ) {
+		pi->pendingTorsoAnim = 0;
+		UI_ForceTorsoAnim( pi, torsoAnim );
+	}
+	*/
+	if ( torsoAnim != currentAnim ) {
 		pi->pendingTorsoAnim = 0;
 		UI_ForceTorsoAnim( pi, torsoAnim );
 	}

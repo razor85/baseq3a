@@ -276,6 +276,12 @@ int		trap_R_LerpTag( orientation_t *tag, clipHandle_t mod, int startFrame, int e
 	return syscall( CG_R_LERPTAG, tag, mod, startFrame, endFrame, PASSFLOAT(frac), tagName );
 }
 
+// Nightz - IQM
+int trap_R_GetAnimations( qhandle_t model, animationData_t* data, int* numAnims ) {
+	return syscall( CG_GET_ANIMATIONS, model, data, numAnims );
+}
+// End Nightz
+
 void	trap_R_RemapShader( const char *oldShader, const char *newShader, const char *timeOffset ) {
 	syscall( CG_R_REMAP_SHADER, oldShader, newShader, timeOffset );
 }

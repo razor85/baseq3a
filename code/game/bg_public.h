@@ -258,6 +258,14 @@ typedef enum {
 
 #define EF_NOPREDICT ( EF_AWARDS | EF_PERSISTANT | EF_TALK )
 
+// SMDF Flags
+typedef enum {
+	SMDF_NONE,
+	SMDF_SWING,
+
+	SMDF_NUM_FLAGS
+} smdfFlags_t;
+
 // NOTE: may not have more than 16
 typedef enum {
 	PW_NONE,
@@ -468,6 +476,7 @@ typedef enum {
 } global_team_sound_t;
 
 // animations
+/*
 typedef enum {
 	BOTH_DEATH1,
 	BOTH_DEAD1,
@@ -513,6 +522,84 @@ typedef enum {
 
 	MAX_ANIMATIONS,
 
+	LEGS_BACKCR,
+	LEGS_BACKWALK,
+	FLAG_RUN,
+	FLAG_STAND,
+	FLAG_STAND2RUN,
+
+	MAX_TOTALANIMATIONS
+} animNumber_t;
+*/
+
+// Nightz - Spiderman animations
+typedef enum {
+	BOTH_DEATH1,
+	BOTH_DEAD1,
+	BOTH_DEATH2,
+	BOTH_DEAD2,
+	BOTH_DEATH3,
+	BOTH_DEAD3,
+
+	//Movement
+	//BOTH anims mean the player moves head, torso and legs ;)
+
+	BOTH_IDLE,	//idle on ground
+	BOTH_IDLECR,	//idle crouch
+	BOTH_RUN,	//run?!
+	BOTH_RUN_BACK,	//run backwards
+	BOTH_BEAT, //BEATEN, TIRED, AND STUN
+	BOTH_DODGELEFT, //roll's to the players left
+	BOTH_DODGERIGHT, //roll's to the players right
+	BOTH_WALLJUMP, //kicks off wall, camera turns with player in anim
+	BOTH_SWIM,	//swiming
+	BOTH_JUMP,	//jumping
+	BOTH_LAND,	//landing
+	BOTH_WEBS,	//SHOOTING WEBSLING FROM HIS HAND - GG: ON HIS GLIDER(GLIDER_IDLE)
+	BOTH_WEBB,	//SHOOTING WEBWRAP/BOMB - GG: THROWING BOMB FROM HIS BACKPACK
+	BOTH_SWING,	//SWING
+	BOTH_FALL,	//falling when someone throws u 
+	BOTH_FALLING,	//falling with pose =P
+	BOTH_WALLCRAWL_IDLE,	//wallcrawl stopped
+	BOTH_WALLCRAWLING,	//wallcrawling
+	BOTH_BBACK, //bounce back from jump attacks, off of enemy
+	BOTH_GETOFF,	//entangled trying to get off
+	BOTH_GOTOFF,	//got off the entangled(web)
+	BOTH_ONFLOOR, //thrown on floor
+	BOTH_STUCKWALL, //stuck on wall when throw
+	BOTH_BACKNORMAL, //this will be used to player get up from ground and stay idle
+	LEGS_TURN,
+
+	//MELEE
+
+	BOTH_BLOCK, //BLOCKING
+	BOTH_BLOCKCR, //blocking crouching
+	TORSO_RPUNCH, //right punch for punch cicle 
+	TORSO_LPUNCH, //Left punch for punch cicle
+	BOTH_HKICK, //High Kick for kick cicle
+	BOTH_LKICK, //Low kick for kick cicle
+	BOTH_SHOULDER, //running shoulder charge
+	BOTH_NKICK, //running flying kick
+	BOTH_COMBO,	//first combo
+	BOTH_COMBO2, //punch kick axehandle or whatever.. spice it up
+	TORSO_WEBFIST, //webfist charging
+	BOTH_JPUNCH, //axehandle smashing down on opponent
+	BOTH_JKICK, //swoop dive kick, smashes down on opponent
+
+
+	//ATTACKS
+
+	BOTH_GETTHROWABLE, //GETTING THROWABLE FROM THE GROUND
+	TORSO_THROWABLE, //HOLDING THROWABLE = |o|
+	TORSO_THROWING, //THROWING THROWABLE
+	TORSO_WEBYANK, //after webshooting enemy, this anim will yank his webline and tug them close 
+
+	TORSO_SPECIAL, //WEB SHOT FOR SPIDEY, SCORP(ACID SPRAY)
+	TORSO_SPECIAL2, //THROW FOR SPIDEY, SCORP(ELECTRICAL)
+	TORSO_SPECIAL3,	//GG ATTACKS(FOR OTHERS, FREE SLOT, LIKE IDLE TO PREVENT BUG)
+
+	MAX_ANIMATIONS,
+	
 	LEGS_BACKCR,
 	LEGS_BACKWALK,
 	FLAG_RUN,

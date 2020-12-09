@@ -380,9 +380,120 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace ) {
 		ent->parent->client->ps.pm_flags |= PMF_GRAPPLE_PULL;
 		VectorCopy( ent->r.currentOrigin, ent->parent->client->ps.grapplePoint);
 
+		// Calculate maximum web distance.
+		vec3_t grappleLine;
+    VectorSubtract(ent->parent->client->ps.grapplePoint, ent->parent->client->ps.origin, grappleLine);
+
+		// Figure out if we are on the left or the right of the point to create a force pushing us
+		// apart from it.
+		vec3_t positionRelativeToGrapplePoint;
+		VectorCopy(grappleLine, positionRelativeToGrapplePoint);
+		positionRelativeToGrapplePoint[2] = 0;
+
+		vec3_t forward, right, up;
+		AngleVectors(ent->parent->client->ps.viewangles, forward, right, up);
+
+		// Discover how far the player is to the ground.
+    vec3_t groundBelow, down = { 0, 0, -10000 };
+    VectorAdd(ent->parent->client->ps.origin, down, groundBelow);
+
+    trace_t tr;
+    trap_Trace(&tr, ent->parent->client->ps.origin, vec3_origin, vec3_origin, groundBelow,
+      ENTITYNUM_NONE, MASK_OPAQUE);
+	
+		float groundDistance = 0;
+		if (tr.fraction < 1.0 && !tr.allsolid) {
+			vec3_t tmp;
+			VectorSubtract(tr.endpos, ent->parent->client->ps.origin, tmp);
+			groundDistance = VectorNormalize(tmp);
+		}
+
+		// Are the point close to the ground? Search around it as it is probably on solid
+		float pointToGroundDistance = 0;
+		for (int i = 0; i < 10; ++i) {
+			const float angleIncrement = 36;
+			const float searchRadius = 50;
+
+			vec3_t incrementVector;
+			incrementVector[0] = searchRadius * cos(DEG2RAD(angleIncrement * i));
+			incrementVector[1] = searchRadius * sin(DEG2RAD(angleIncrement * i));
+
+      vec3_t start, end;
+      VectorAdd(ent->parent->client->ps.grapplePoint, incrementVector, start);
+			VectorAdd(start, down, end);
+
+      trap_Trace(&tr, start, vec3_origin, vec3_origin, end, ENTITYNUM_NONE, MASK_OPAQUE);
+      if (tr.fraction < 1.0 && !tr.allsolid) {
+        vec3_t tmp;
+        VectorSubtract(tr.endpos, start, tmp);
+        pointToGroundDistance = VectorNormalize(tmp);
+				break;
+      }
+		}
+
+    const float grappleLineSize = VectorLength(grappleLine);
+		const qboolean needsPulling = grappleLineSize > groundDistance &&
+			groundDistance < pointToGroundDistance;
+
+		const float projected = DotProduct(positionRelativeToGrapplePoint, right);
+		const float forcePushDirection = projected > 0 ? -1.0f : 1.0f;
+
+		G_Printf("Needs pulling %d - Ground %f - Point %f - Grapple line %f\n", needsPulling, 
+			groundDistance, pointToGroundDistance, grappleLineSize);
+
+		vec3_t pushForceVector;
+		VectorScale(right, forcePushDirection, pushForceVector);
+		VectorNormalize(pushForceVector);
+
+		if (needsPulling) {
+			const float grappleLineReduced = grappleLineSize * 0.80f;
+			const float pointLineReduced = pointToGroundDistance * 0.80f;
+      ent->parent->client->ps.grappleLength = grappleLineReduced < pointLineReduced ?
+				grappleLineReduced
+				:
+				pointLineReduced;
+
+			G_Printf("Length choosen was %f\n", ent->parent->client->ps.grappleLength);
+
+		  ent->parent->client->ps.grapplePulling = qtrue;
+		  ent->parent->client->ps.grappleTime = ent->parent->client->pers.cmd.serverTime;
+			VectorCopy(pushForceVector, ent->parent->client->ps.grapplePushForce);
+		} else {
+      ent->parent->client->ps.grappleLength = grappleLineSize;
+		  ent->parent->client->ps.grapplePulling = qfalse;
+		  ent->parent->client->ps.grappleTime = ent->parent->client->pers.cmd.serverTime;
+			VectorCopy(pushForceVector, ent->parent->client->ps.grapplePushForce);
+		}
+
+    gentity_t* bolt;
+    bolt = G_Spawn();
+    bolt->classname = "plasma";
+    bolt->nextthink = level.time + 10000;
+    bolt->think = G_ExplodeMissile;
+    bolt->s.eType = ET_MISSILE;
+    bolt->r.svFlags = SVF_USE_CURRENT_ORIGIN;
+    bolt->s.weapon = WP_PLASMAGUN;
+    bolt->r.ownerNum = ent->s.number;
+    bolt->parent = ent;
+    bolt->damage = 0;
+    bolt->clipmask = MASK_PLAYERSOLID;
+    bolt->target_ent = NULL;
+    bolt->s.clientNum = ent->s.clientNum;
+    bolt->s.otherEntityNum = ent->s.number;
+    bolt->s.pos.trType = TR_STATIONARY;
+    bolt->s.pos.trTime = level.time - MISSILE_PRESTEP_TIME;
+
+		vec3_t tmp, downa = { 0, 0, -1 };
+		VectorMA(ent->parent->client->ps.grapplePoint, ent->parent->client->ps.grappleLength, downa, tmp);
+		//VectorMA(ent->parent->client->ps.grapplePoint, 50, downa, tmp);
+    VectorCopy(tmp, bolt->s.pos.trBase);
+    SnapVector(bolt->s.pos.trBase);
+    VectorCopy(vec3_origin, bolt->s.pos.trDelta);
+    SnapVector(bolt->s.pos.trDelta);
+    VectorCopy(tmp, bolt->r.currentOrigin);
+
 		trap_LinkEntity( ent );
 		trap_LinkEntity( nent );
-
 		return;
 	}
 
@@ -698,7 +809,7 @@ gentity_t *fire_grapple (gentity_t *self, vec3_t start, vec3_t dir) {
 	// unlagged
 	int			hooktime;
 
-	VectorNormalize (dir);
+	//VectorNormalize (dir);
 
 	hook = G_Spawn();
 	hook->classname = "hook";
@@ -726,11 +837,18 @@ gentity_t *fire_grapple (gentity_t *self, vec3_t start, vec3_t dir) {
 
 	hook->s.pos.trType = TR_LINEAR;
 	hook->s.pos.trTime = hooktime;
+	VectorCopy(self->client->ps.grapplePoint, hook->s.pos.trBase);
+	SnapVector(hook->s.pos.trBase);
+  VectorCopy(vec3_origin, hook->s.pos.trDelta);
+  SnapVector(hook->s.pos.trDelta);
+  VectorCopy(self->client->ps.grapplePoint, hook->r.currentOrigin);
+	/*
 	VectorCopy( start, hook->s.pos.trBase );
 	SnapVector( hook->s.pos.trBase );			// save net bandwidth
-	VectorScale( dir, 800, hook->s.pos.trDelta );
+	VectorScale( dir, 100000, hook->s.pos.trDelta );
 	SnapVector( hook->s.pos.trDelta );			// save net bandwidth
 	VectorCopy (start, hook->r.currentOrigin);
+	*/
 
 	self->client->hook = hook;
 

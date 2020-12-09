@@ -48,6 +48,11 @@ Creates an entity in front of the current position, which
 can then be moved around
 =================
 */
+animationData_t anims[4];
+float timeAccumulator = 0;
+int animsTime;
+int numAnims = 0;
+
 void CG_TestModel_f (void) {
 	vec3_t		angles;
 
@@ -58,6 +63,18 @@ void CG_TestModel_f (void) {
 
 	Q_strncpyz (cg.testModelName, CG_Argv( 1 ), MAX_QPATH );
 	cg.testModelEntity.hModel = trap_R_RegisterModel( cg.testModelName );
+	cg.testModelEntity.customSkin = trap_R_RegisterSkin("models/players/spidey/spidey_iqm.skin");
+
+	numAnims = 4;
+	trap_R_GetAnimations( cg.testModelEntity.hModel, anims, &numAnims );
+	cg.testModelEntity.frame = anims[1].first_frame;
+	animsTime = cg.time;
+
+	for (int i = 0; i < numAnims; ++i) {
+		animationData_t* anim = &anims[i];
+    CG_Printf("Found Animation(%d): %s -> FF: %d, NF: %d, FR: %f, FL: %d\n",
+      i, anim->name, anim->first_frame, anim->num_frames, anim->framerate, anim->flags);
+	}
 
 	if ( trap_Argc() == 3 ) {
 		cg.testModelEntity.backlerp = atof( CG_Argv( 2 ) );
@@ -198,6 +215,7 @@ CG_OffsetThirdPersonView
 
 ===============
 */
+/*
 #define	FOCUS_DISTANCE	512
 static void CG_OffsetThirdPersonView( void ) {
 	vec3_t		forward, right, up;
@@ -269,7 +287,52 @@ static void CG_OffsetThirdPersonView( void ) {
 	cg.refdefViewAngles[PITCH] = -180 / M_PI * atan2( focusPoint[2], focusDist );
 	cg.refdefViewAngles[YAW] -= cg_thirdPersonAngle.value;
 }
+*/
 
+/*
+ * CG_OffsetThirdPersonView 
+ * by Yondaime
+ */ 
+static void CG_OffsetThirdPersonView(void) {
+	float dist_back, dist_right, angle;
+	static vec3_t mins = { -4, -4, -4 };
+	static vec3_t maxs = { 4, 4, 4 };
+
+	vec3_t forward, right, end;
+	trace_t camera, aim; 
+
+  if (cg.snap->ps.pm_type == PM_SPECTATOR)
+    return;
+	
+	// Camera offset
+	cg.refdef.vieworg[2] += 60;
+	angle = M_PI * cg_thirdPersonAngle.value / 180.0f;
+	dist_right = cg_thirdPersonRange.value * sin(angle);
+	dist_back = cg_thirdPersonRange.value * cos(angle); 
+	
+	// Get viewing angles
+	AngleVectors(cg.refdefViewAngles, forward, right, 0); 
+		
+	// Find camera
+	memset(&end, 0, sizeof(vec3_t));
+	VectorMA(cg.refdef.vieworg, -dist_right, right, end);
+	VectorMA(end, -dist_back, forward, end);
+	CG_Trace(&camera, cg.refdef.vieworg, mins, maxs, end, cg.predictedPlayerState.clientNum, MASK_SOLID); 
+	
+	// Find aim
+	memset(&end, 0, sizeof(vec3_t));
+	VectorMA(cg.refdef.vieworg, dist_right, right, end);
+	VectorMA(end, dist_back, forward, end);
+	CG_Trace(&aim, cg.refdef.vieworg, mins, maxs, end, cg.predictedPlayerState.clientNum, MASK_SOLID); 
+	
+	// Adjust camera to aim
+	VectorSubtract(aim.endpos, camera.endpos, end);
+	VectorNormalize(end);
+	vectoangles(end, aim.endpos); 
+	VectorCopy(aim.endpos, cg.refdefViewAngles);
+	VectorCopy(camera.endpos, cg.refdef.vieworg);
+	cg.refdef.vieworg[2] += 5;
+}
 
 // this causes a compiler bug on mac MrC compiler
 static void CG_StepOffset( void ) {
@@ -880,6 +943,33 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 
 	// update audio positions
 	trap_S_Respatialize( cg.snap->ps.clientNum, cg.refdef.vieworg, cg.refdef.viewaxis, inwater );
+
+	// Nightz - Test
+	if (numAnims > 0) {
+		animationData_t* currentAnim = &anims[1];
+
+		//float changeTime = currentAnim->framerate / 1000.0f;
+		float changeTime = 1.0f / 35.0f;
+		float elapsedTime = ((float)(cg.time - animsTime)) / 1000.0f;
+		animsTime = cg.time;
+
+		if (elapsedTime > 0)
+      timeAccumulator += elapsedTime;
+
+		int numFrames = 0;
+		while (timeAccumulator >= changeTime) {
+			timeAccumulator -= changeTime;
+			numFrames++;
+		}
+			
+		if (numFrames) {
+			cg.testModelEntity.frame += numFrames;
+			if (cg.testModelEntity.frame >= currentAnim->num_frames) {
+				cg.testModelEntity.frame = currentAnim->first_frame + 
+					(cg.testModelEntity.frame % currentAnim->num_frames);
+			}
+		}
+	}
 
 	// make sure the lagometerSample and frame timing isn't done twice when in stereo
 	if ( stereoView != STEREO_RIGHT ) {

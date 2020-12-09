@@ -535,6 +535,8 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 			if ( g_dmflags.integer & DF_NO_FALLING ) {
 				break;
 			}
+			// Nightz - Don't take fall damage
+			/*
 			if ( event == EV_FALL_FAR ) {
 				damage = 10;
 			} else {
@@ -542,6 +544,8 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 			}
 			ent->pain_debounce_time = level.time + 200;	// no normal pain sound
 			G_Damage (ent, NULL, NULL, NULL, NULL, damage, 0, MOD_FALLING);
+			*/
+			// End - Nightz
 			break;
 
 		case EV_FIRE_WEAPON:
@@ -716,6 +720,187 @@ void SendPendingPredictableEvents( playerState_t *ps ) {
 	}
 }
 
+void Set_Swing( gentity_t* ent, pmove_t* pmove, vec3_t point, vec3_t normal ) {
+	gclient_t* client = ent->client;
+	client->ps.smdfFlags[SMDF_SWING] = qtrue;
+
+	vec3_t direction;
+	VectorSubtract(point, client->ps.origin, direction);
+	VectorNormalize(direction);
+
+	/*
+	VectorCopy(point, client->ps.grapplePoint);
+
+  // Calculate maximum web distance.
+  vec3_t grappleLine;
+  VectorSubtract(client->ps.grapplePoint, client->ps.origin, grappleLine);
+	
+  client->ps.grappleLength = VectorLength(grappleLine);
+  client->ps.grapplePulling = qfalse;
+	*/
+
+	fire_grapple(ent, client->ps.origin, direction);
+}
+
+void Try_Swing( gentity_t* ent, pmove_t* pmove ) {
+	gclient_t* client = ent->client;
+	
+	vec3_t forward, right, up;
+	AngleVectors(client->ps.viewangles, forward, right, up);
+
+	// If player is on the ground, jump first
+	vec3_t originToGround;
+	VectorCopy(client->ps.origin, originToGround);
+	originToGround[2] -= 35;
+
+	trace_t tr;
+	trap_Trace(&tr, client->ps.origin, vec3_origin, vec3_origin, originToGround, 
+		ENTITYNUM_NONE, MASK_OPAQUE);
+	
+	// Wait for jump to propel player upwards
+  G_Printf("Level time is %d and swing time is %d\n", level.time, client->swingJumpTime);
+	if (level.time < client->swingJumpTime)
+		return;
+
+	if (tr.fraction < 1.0) {
+    client->swingJumpTime = level.time + 1000;
+    client->ps.velocity[2] = 800;
+		G_Printf("Generating swing time to %d\n", client->swingJumpTime);
+		return;
+	}
+
+	if (1) {
+		qboolean foundTarget = qfalse;
+		vec3_t swingPoint, forwardPlane;
+		float smallerDistance = 0;
+
+		VectorCopy(forward, forwardPlane);
+		VectorNormalize(forwardPlane);
+		forwardPlane[2] = 0;
+
+		// TODO: Use spatial search.
+		// G_Printf("Searching in %d swing points\n", level.numSwingPoints);
+		for (int i = 0; i < level.numSwingPoints; ++i) {
+			vec3_t tmp, tmpPoint;
+			VectorCopy(level.swingPoints[i], tmpPoint);
+			VectorSubtract(tmpPoint, client->ps.origin, tmp);
+
+			// Never aim down.
+			if (tmpPoint[2] <= client->ps.origin[2])
+				continue;
+
+			// Pick only points in front of the character
+      vec3_t tmpPointPlane;
+      VectorCopy(tmp, tmpPointPlane);
+			VectorNormalize(tmpPointPlane);
+      tmpPointPlane[2] = 0;
+
+			const float dot = DotProduct(forwardPlane, tmpPointPlane);
+			const float maxAngleCosine = cos(DEG2RAD(65.0f));
+			if (dot <= maxAngleCosine)
+				continue;
+
+			const float distance = VectorNormalize(tmp);
+			if (foundTarget == qfalse || distance < smallerDistance) {
+				foundTarget = qtrue;
+				smallerDistance = distance;
+				VectorCopy(tmpPoint, swingPoint);
+			}
+		}
+
+		if (foundTarget) {
+			VectorCopy(swingPoint, client->ps.grapplePoint);
+			// G_Printf("Registered swing point at %f %f %f\n", swingPoint[0], 
+			// 	swingPoint[1], swingPoint[2]);
+
+			fire_grapple(ent, client->ps.origin, vec3_origin);
+			client->ps.smdfFlags[SMDF_SWING] = qtrue;
+		}
+
+		return;
+	}
+
+	// If player is going up, don't swing
+	if (client->ps.velocity[2] > 0)
+		return;
+	
+	VectorCopy(client->ps.origin, originToGround);
+	originToGround[2] -= 10000;
+
+	vec3_t playerToGround;
+	VectorSubtract(tr.endpos, client->ps.origin, playerToGround);
+	const float distanceToGround = VectorNormalize(playerToGround);
+	const float maxWebDistance = distanceToGround * 0.9f;
+
+	// Abort if distance is in any way invalid.
+	if (maxWebDistance == NAN)
+		return;
+
+	// Check player sides to see which is closer
+	vec3_t tmpSide;
+	VectorMA(client->ps.origin, 1000, right, tmpSide);
+  trap_Trace(&tr, client->ps.origin, vec3_origin, vec3_origin, tmpSide,
+    ENTITYNUM_NONE, MASK_OPAQUE);
+
+	const float rightFraction = tr.fraction;
+	VectorMA(client->ps.origin, -1000, right, tmpSide);
+  trap_Trace(&tr, client->ps.origin, vec3_origin, vec3_origin, tmpSide,
+    ENTITYNUM_NONE, MASK_OPAQUE);
+	
+	const float leftFraction = tr.fraction;
+	const float sideAmounts[4] = { 
+		leftFraction < rightFraction ? -0.35f : +0.35f,
+		leftFraction < rightFraction ? -0.40f : +0.40f,
+		leftFraction > rightFraction ? -0.35f : +0.35f,
+		leftFraction > rightFraction ? -0.40f : +0.40f
+	};
+		
+	vec3_t tmpUp;
+	VectorScale(up, 2000, tmpUp);
+
+	vec3_t traceOrigin;
+	VectorMA(client->ps.origin, 0, forward, traceOrigin);
+
+	const float forwardOptions[6] = { 0.35f, 0.45f, 0.5f, 0.75f, 1.0f, 2.0f };
+	for ( int i = 0; i < 6; ++i ) {
+		vec3_t tmpForward;
+		VectorScale(forward, maxWebDistance * forwardOptions[i], tmpForward);
+
+		//G_Printf("Web distance is %f and forward is %f\n", maxWebDistance, forwardOptions[i]);
+		for (int j = 0; j < 4; ++j) {
+			vec3_t tmpSum;
+			VectorAdd(tmpForward, tmpUp, tmpSum);
+
+			vec3_t trySide;
+			VectorMA(tmpSum, maxWebDistance * sideAmounts[j], right, trySide);
+			VectorAdd(trySide, client->ps.origin, trySide);
+
+			// First try one side, then another
+			trace_t webTrace;
+			trap_Trace(&webTrace, traceOrigin, vec3_origin, vec3_origin, trySide,
+			  ENTITYNUM_NONE, MASK_OPAQUE);
+
+			vec3_t copyNormal;
+			VectorCopy(webTrace.plane.normal, copyNormal);
+			copyNormal[2] = 0;
+
+			vec3_t copyForward;
+			VectorCopy(client->ps.velocity, copyForward);
+			copyForward[2] = 0;
+
+			const float cosForward = DotProduct(forward, webTrace.plane.normal);
+			if (webTrace.fraction < 1.0 && cosForward <= 0.5) {
+				Set_Swing(ent, pmove, webTrace.endpos, webTrace.plane.normal);
+				G_Printf("Got at %f -> %f %f %f with client at %f %f %f\n", sideAmounts[j], 
+					webTrace.endpos[0], webTrace.endpos[1], webTrace.endpos[2], 
+					client->ps.origin[0], client->ps.origin[1], client->ps.origin[2]);
+
+				return;
+			}
+		}
+	}
+}
+
 /*
 ==============
 ClientThink
@@ -832,11 +1017,23 @@ void ClientThink_real( gentity_t *ent ) {
 		client->ps.speed *= 1.3;
 	}
 
+	// Nightz - Custom Button mapping
+	if ( ucmd->buttons & BUTTON_SWING ) {
+		if ( !client->ps.smdfFlags[SMDF_SWING] )
+			Try_Swing(ent, &pm);
+	} else if (!client->ps.smdfFlags[SMDF_SWING] && client->hook) {
+    G_FreeEntity(client->hook);
+    client->hook = NULL;
+	}
+	// End Nightz
+
 	// Let go of the hook if we aren't firing
+	/*
 	if ( client->ps.weapon == WP_GRAPPLING_HOOK &&
 		client->hook && !( ucmd->buttons & BUTTON_ATTACK ) ) {
 		Weapon_HookFree(client->hook);
 	}
+	*/
 
 	// set up for pmove
 	oldEventSequence = client->ps.eventSequence;

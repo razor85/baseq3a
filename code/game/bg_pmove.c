@@ -113,6 +113,36 @@ static void PM_ContinueTorsoAnim( int anim ) {
 	PM_StartTorsoAnim( anim );
 }
 
+static void PM_ContinueBothAnim( int anim ) {
+	qboolean doLegs = qtrue;
+	if ( ( pm->ps->legsAnim & ~ANIM_TOGGLEBIT ) == anim ) {
+		doLegs = qfalse;
+	}
+	if ( pm->ps->legsTimer > 0 ) {
+		doLegs = qfalse; // a high priority animation is running
+	}
+	if (doLegs)
+    PM_StartLegsAnim(anim);
+
+	qboolean doTorso = qtrue;
+	if ( ( pm->ps->torsoAnim & ~ANIM_TOGGLEBIT ) == anim ) {
+		doTorso = qfalse;
+	}
+	if ( pm->ps->torsoTimer > 0 ) {
+		doTorso = qfalse; // a high priority animation is running
+	}
+
+	if (doTorso)
+    PM_StartTorsoAnim(anim);
+}
+
+static void PM_ForceBothAnim( int anim ) {
+	pm->ps->torsoTimer = 0;
+	pm->ps->legsTimer = 0;
+	PM_StartLegsAnim( anim );
+	PM_StartTorsoAnim( anim );
+}
+
 static void PM_ForceLegsAnim( int anim ) {
 	pm->ps->legsTimer = 0;
 	PM_StartLegsAnim( anim );
@@ -352,6 +382,12 @@ static qboolean PM_CheckJump( void ) {
 		return qfalse;
 	}
 
+	// Stop swinging
+  if (pm->ps->smdfFlags[SMDF_SWING]) {
+    pm->ps->smdfFlags[SMDF_SWING] = qfalse;
+    pm->ps->pm_flags &= ~PMF_GRAPPLE_PULL;
+	}
+
 	// must wait for jump to be released
 	if ( pm->ps->pm_flags & PMF_JUMP_HELD ) {
 		// clear upmove so cmdscale doesn't lower running speed
@@ -368,10 +404,10 @@ static qboolean PM_CheckJump( void ) {
 	PM_AddEvent( EV_JUMP );
 
 	if ( pm->cmd.forwardmove >= 0 ) {
-		PM_ForceLegsAnim( LEGS_JUMP );
+		PM_ForceBothAnim( BOTH_JUMP );
 		pm->ps->pm_flags &= ~PMF_BACKWARDS_JUMP;
 	} else {
-		PM_ForceLegsAnim( LEGS_JUMPB );
+		PM_ForceBothAnim( BOTH_JUMP );
 		pm->ps->pm_flags |= PMF_BACKWARDS_JUMP;
 	}
 
@@ -650,23 +686,148 @@ PM_GrappleMove
 ===================
 */
 static void PM_GrappleMove( void ) {
-	vec3_t vel, v;
-	float vlen;
+	int			i;
+	vec3_t		wishvel;
+	float		fmove, smove;
+	vec3_t		wishdir;
+	float		wishspeed;
+	float		scale;
+	usercmd_t	cmd;
 
-	VectorScale(pml.forward, -16, v);
-	VectorAdd(pm->ps->grapplePoint, v, v);
-	VectorSubtract(v, pm->ps->origin, vel);
-	vlen = VectorLength(vel);
-	VectorNormalize( vel );
+	PM_Friction();
+	PM_ForceBothAnim(BOTH_SWING);
 
-	if (vlen <= 100)
-		VectorScale(vel, 10 * vlen, vel);
-	else
-		VectorScale(vel, 800, vel);
+	// Jumping
+	if (pm->cmd.upmove && pm->ps->smdfFlags[SMDF_SWING]) {
+		pm->ps->smdfFlags[SMDF_SWING] = qfalse;
+		pm->ps->pm_flags &= ~PMF_GRAPPLE_PULL;
 
-	VectorCopy(vel, pm->ps->velocity);
+    vec3_t forward, right, up;
+    AngleVectors(pm->ps->viewangles, forward, right, up);
 
+		VectorMA(pm->ps->velocity, 200, up, pm->ps->velocity);
+		VectorMA(pm->ps->velocity, 50, forward, pm->ps->velocity);
+		PM_AirMove();
+
+		return;
+	}
+
+	fmove = pm->cmd.forwardmove;
+	smove = pm->cmd.rightmove;
+
+	cmd = pm->cmd;
+	scale = PM_CmdScale( &cmd );
+
+	// set the movementDir so clients can rotate the legs for strafing
+	PM_SetMovementDir();
+
+	// project moves down to flat plane
+	pml.forward[2] = 0;
+	pml.right[2] = 0;
+	VectorNormalize (pml.forward);
+	VectorNormalize (pml.right);
+
+	/*
+	for ( i = 0 ; i < 2 ; i++ ) {
+		wishvel[i] = pml.forward[i]*fmove + pml.right[i]*smove;
+	}
+	wishvel[2] = 0;
+
+	VectorCopy (wishvel, wishdir);
+	wishspeed = VectorNormalize(wishdir);
+	wishspeed *= scale;
+	*/
+
+	// If we started swinging, use a force to keep us far from the swing point.
+	const int grappleTotalTime = pm->cmd.serverTime - pm->ps->grappleTime;
+	vec3_t pushForce;
+	VectorClear(pushForce);
+	if (grappleTotalTime < 5000) {
+		float forceScale = 150;
+		if (grappleTotalTime > 1000)
+			forceScale -= grappleTotalTime / 80.0f;
+
+		VectorScale(pm->ps->grapplePushForce, 150, pushForce);
+	}
+	
+	// Swing towards grapple point
+	vec3_t grappleDirection;
+	VectorSubtract(pm->ps->grapplePoint, pm->ps->origin, grappleDirection);
+
+	float grappleX = VectorNormalize(grappleDirection);
+  float xDiff = grappleX - pm->ps->grappleLength;
+	if (pm->ps->grapplePulling) {
+    vec3_t pullDirection, targetGrapplePoint;
+		VectorCopy(pm->ps->grapplePoint, targetGrapplePoint);
+		VectorAdd(targetGrapplePoint, pushForce, targetGrapplePoint);
+		targetGrapplePoint[2] -= pm->ps->grappleLength;
+
+    VectorSubtract(targetGrapplePoint, pm->ps->origin, pullDirection);
+		const float targetLength = VectorNormalize(pullDirection);
+		if (targetLength < 50) {
+			Com_Printf("Not pulling anymore\n");
+      pm->ps->grapplePulling = qfalse;
+			
+			VectorMA(pm->ps->velocity, 150, pml.forward, pm->ps->velocity);
+		} else {
+      VectorScale(pullDirection, 1000, pm->ps->velocity);
+		}
+	}
+
+	VectorClear(pushForce);
+	
+	if (!pm->ps->grapplePulling) {
+		vec3_t tmpVelocity;
+		VectorCopy(pm->ps->velocity, tmpVelocity);
+		VectorAdd(tmpVelocity, pushForce, tmpVelocity);
+
+		// Gravity
+		tmpVelocity[2] -= pml.frametime * pm->ps->gravity;
+
+		// User speed
+		usercmd_t cmd = pm->cmd;
+		const float scale = PM_CmdScale( &cmd );
+		const float fmove = pm->cmd.forwardmove;
+		const float smove = pm->cmd.rightmove;
+
+		vec3_t wishVel, wishDir;
+		wishVel[0] = pml.forward[0] * fmove + pml.right[0] * smove;
+		wishVel[1] = pml.forward[1] * fmove + pml.right[1] * smove;
+		wishVel[2] = 0;
+
+		VectorCopy(wishVel, wishDir);
+		const float wishSpeed = VectorNormalize(wishDir) * scale;
+
+		// Same as PM_Accelerate
+		float currentSpeed = DotProduct(tmpVelocity, wishDir);
+		float addSpeed = wishSpeed - currentSpeed;
+		if (addSpeed > 0) {
+			float accelSpeed = pm_airaccelerate * pml.frametime * wishSpeed;
+			if (accelSpeed > addSpeed)
+				accelSpeed = addSpeed;
+			
+      for (i = 0; i < 3; i++)
+        tmpVelocity[i] += accelSpeed * wishDir[i];
+		}
+
+		vec3_t futureOrigin;
+		VectorMA(pm->ps->origin, pml.frametime, tmpVelocity, futureOrigin);
+
+		vec3_t futureGrappleDirection;
+    VectorSubtract(pm->ps->grapplePoint, futureOrigin, futureGrappleDirection);
+
+		const float futureGrappleLength = VectorNormalize(futureGrappleDirection);
+		if (futureGrappleLength > pm->ps->grappleLength) {
+			float lengthDiff = futureGrappleLength - pm->ps->grappleLength;
+			VectorMA(pm->ps->velocity, lengthDiff, futureGrappleDirection, pm->ps->velocity);
+		}
+	}
+	
 	pml.groundPlane = qfalse;
+	VectorAdd(pm->ps->velocity, pushForce, pm->ps->velocity);
+		
+	// Give the player the chance to move itself and then simulate
+	PM_AirMove();
 }
 
 /*
@@ -922,9 +1083,9 @@ static void PM_CrashLand( void ) {
 
 	// decide which landing animation to use
 	if ( pm->ps->pm_flags & PMF_BACKWARDS_JUMP ) {
-		PM_ForceLegsAnim( LEGS_LANDB );
+		PM_ForceBothAnim( BOTH_LAND );
 	} else {
-		PM_ForceLegsAnim( LEGS_LAND );
+		PM_ForceBothAnim( BOTH_LAND );
 	}
 
 	pm->ps->legsTimer = TIMER_LAND;
@@ -1076,10 +1237,10 @@ static void PM_GroundTraceMissed( void ) {
 		pm->trace (&trace, pm->ps->origin, pm->mins, pm->maxs, point, pm->ps->clientNum, pm->tracemask);
 		if ( trace.fraction == 1.0 ) {
 			if ( pm->cmd.forwardmove >= 0 ) {
-				PM_ForceLegsAnim( LEGS_JUMP );
+				PM_ForceBothAnim( BOTH_JUMP );
 				pm->ps->pm_flags &= ~PMF_BACKWARDS_JUMP;
 			} else {
-				PM_ForceLegsAnim( LEGS_JUMPB );
+				PM_ForceBothAnim( BOTH_JUMP );
 				pm->ps->pm_flags |= PMF_BACKWARDS_JUMP;
 			}
 		}
@@ -1128,10 +1289,10 @@ static void PM_GroundTrace( void ) {
 		}
 		// go into jump animation
 		if ( pm->cmd.forwardmove >= 0 ) {
-			PM_ForceLegsAnim( LEGS_JUMP );
+      PM_ForceBothAnim(BOTH_JUMP);
 			pm->ps->pm_flags &= ~PMF_BACKWARDS_JUMP;
 		} else {
-			PM_ForceLegsAnim( LEGS_JUMPB );
+      PM_ForceBothAnim(BOTH_JUMP);
 			pm->ps->pm_flags |= PMF_BACKWARDS_JUMP;
 		}
 
@@ -1326,12 +1487,15 @@ static void PM_Footsteps( void ) {
 
 	if ( pm->ps->groundEntityNum == ENTITYNUM_NONE ) {
 
-		if ( pm->ps->powerups[PW_INVULNERABILITY] ) {
-			PM_ContinueLegsAnim( LEGS_IDLECR );
-		}
+		// Nightz - No invul
+		// if ( pm->ps->powerups[PW_INVULNERABILITY] ) {
+		// 	PM_ContinueLegsAnim( LEGS_IDLECR );
+		// }
+		// End Nightz
+
 		// airborne leaves position in cycle intact, but doesn't advance
 		if ( pm->waterlevel > 1 ) {
-			PM_ContinueLegsAnim( LEGS_SWIM );
+			PM_ContinueLegsAnim( BOTH_SWIM );
 		}
 		return;
 	}
@@ -1343,9 +1507,9 @@ static void PM_Footsteps( void ) {
 		if ( xyspeedQ < 5.0*5.0 ) { // not using sqrt() there
 			pm->ps->bobCycle = 0;	// start at beginning of cycle again
 			if ( pm->ps->pm_flags & PMF_DUCKED ) {
-				PM_ContinueLegsAnim( LEGS_IDLECR );
+				PM_ContinueBothAnim( BOTH_IDLE );
 			} else {
-				PM_ContinueLegsAnim( LEGS_IDLE );
+				PM_ContinueBothAnim( BOTH_IDLE );
 			}
 		}
 		return;
@@ -1357,10 +1521,10 @@ static void PM_Footsteps( void ) {
 	if ( pm->ps->pm_flags & PMF_DUCKED ) {
 		bobmove = 0.5;	// ducked characters bob much faster
 		if ( pm->ps->pm_flags & PMF_BACKWARDS_RUN ) {
-			PM_ContinueLegsAnim( LEGS_BACKCR );
+      PM_ContinueBothAnim(BOTH_RUN_BACK);
 		}
 		else {
-			PM_ContinueLegsAnim( LEGS_WALKCR );
+      PM_ContinueBothAnim(BOTH_RUN);
 		}
 		// ducked characters never play footsteps
 	/*
@@ -1377,19 +1541,19 @@ static void PM_Footsteps( void ) {
 		if ( !( pm->cmd.buttons & BUTTON_WALKING ) ) {
 			bobmove = 0.4f;	// faster speeds bob faster
 			if ( pm->ps->pm_flags & PMF_BACKWARDS_RUN ) {
-				PM_ContinueLegsAnim( LEGS_BACK );
+        PM_ContinueBothAnim(BOTH_RUN_BACK);
 			}
 			else {
-				PM_ContinueLegsAnim( LEGS_RUN );
+        PM_ContinueBothAnim(BOTH_RUN);
 			}
 			footstep = qtrue;
 		} else {
 			bobmove = 0.3f;	// walking bobs slow
 			if ( pm->ps->pm_flags & PMF_BACKWARDS_RUN ) {
-				PM_ContinueLegsAnim( LEGS_BACKWALK );
+        PM_ContinueBothAnim(BOTH_RUN_BACK);
 			}
 			else {
-				PM_ContinueLegsAnim( LEGS_WALK );
+        PM_ContinueBothAnim(BOTH_RUN);
 			}
 		}
 	}
@@ -1478,7 +1642,7 @@ static void PM_BeginWeaponChange( int weapon ) {
 	PM_AddEvent( EV_CHANGE_WEAPON );
 	pm->ps->weaponstate = WEAPON_DROPPING;
 	pm->ps->weaponTime += 200;
-	PM_StartTorsoAnim( TORSO_DROP );
+	// PM_StartTorsoAnim( TORSO_DROP );
 }
 
 
@@ -1503,7 +1667,7 @@ static void PM_FinishWeaponChange( void ) {
 	pm->ps->weaponstate = WEAPON_RAISING;
 	pm->ps->eFlags &= ~EF_FIRING;
 	pm->ps->weaponTime += 250;
-	PM_StartTorsoAnim( TORSO_RAISE );
+	// PM_StartTorsoAnim( TORSO_RAISE );
 }
 
 
@@ -1514,6 +1678,7 @@ PM_TorsoAnimation
 ==============
 */
 static void PM_TorsoAnimation( void ) {
+	/*
 	if ( pm->ps->weaponstate == WEAPON_READY ) {
 		if ( pm->ps->weapon == WP_GAUNTLET ) {
 			PM_ContinueTorsoAnim( TORSO_STAND2 );
@@ -1522,6 +1687,7 @@ static void PM_TorsoAnimation( void ) {
 		}
 		return;
 	}
+	*/
 }
 
 
@@ -1595,11 +1761,13 @@ static void PM_Weapon( void ) {
 
 	if ( pm->ps->weaponstate == WEAPON_RAISING ) {
 		pm->ps->weaponstate = WEAPON_READY;
+		/*
 		if ( pm->ps->weapon == WP_GAUNTLET ) {
 			PM_StartTorsoAnim( TORSO_STAND2 );
 		} else {
 			PM_StartTorsoAnim( TORSO_STAND );
 		}
+		*/
 		return;
 	}
 
@@ -1618,9 +1786,11 @@ static void PM_Weapon( void ) {
 			pm->ps->weaponstate = WEAPON_READY;
 			return;
 		}
+		/*
 		PM_StartTorsoAnim( TORSO_ATTACK2 );
 	} else {
 		PM_StartTorsoAnim( TORSO_ATTACK );
+		*/
 	}
 
 	pm->ps->weaponstate = WEAPON_FIRING;
@@ -1709,6 +1879,7 @@ PM_Animate
 */
 
 static void PM_Animate( void ) {
+	/*
 	if ( pm->cmd.buttons & BUTTON_GESTURE ) {
 		if ( pm->ps->torsoTimer == 0 ) {
 			PM_StartTorsoAnim( TORSO_GESTURE );
@@ -1748,6 +1919,7 @@ static void PM_Animate( void ) {
 		}
 #endif
 	}
+	*/
 }
 
 
@@ -1982,8 +2154,6 @@ void PmoveSingle (pmove_t *pmove) {
 		PM_FlyMove();
 	} else if (pm->ps->pm_flags & PMF_GRAPPLE_PULL) {
 		PM_GrappleMove();
-		// We can wiggle a bit
-		PM_AirMove();
 	} else if (pm->ps->pm_flags & PMF_TIME_WATERJUMP) {
 		PM_WaterJumpMove();
 	} else if ( pm->waterlevel > 1 ) {

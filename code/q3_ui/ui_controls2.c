@@ -102,6 +102,9 @@ typedef struct
 #define ID_JOYTHRESHOLD	40
 #define ID_SMOOTHMOUSE	41
 
+// Nightz - custom id's 
+#define ID_SWING 42
+
 #define ANIM_IDLE		0
 #define ANIM_RUN		1
 #define ANIM_WALK		2
@@ -234,6 +237,7 @@ static bind_t g_bindings[] =
 	{"weapon 8",		"plasma gun",		ID_WEAPON8,		ANIM_WEAPON8,	'8',			-1,		-1, -1},
 	{"weapon 9",		"BFG",				ID_WEAPON9,		ANIM_WEAPON9,	'9',			-1,		-1, -1},
 	{"+attack", 		"attack",			ID_ATTACK,		ANIM_ATTACK,	K_CTRL,			-1,		-1, -1},
+	{"+swing", 		"swing",			ID_SWING,		ANIM_IDLE,	-1,			-1,		-1, -1},
 	{"weapprev",		"prev weapon",		ID_WEAPPREV,	ANIM_IDLE,		'[',			-1,		-1, -1},
 	{"weapnext", 		"next weapon",		ID_WEAPNEXT,	ANIM_IDLE,		']',			-1,		-1, -1},
 	{"+button3", 		"gesture",			ID_GESTURE,		ANIM_GESTURE,	K_MOUSE3,		-1,		-1, -1},
@@ -408,31 +412,31 @@ static void Controls_UpdateModel( int anim ) {
 	VectorClear( s_controls.playerMoveangles );
 	s_controls.playerViewangles[YAW] = 180 - 30;
 	s_controls.playerMoveangles[YAW] = s_controls.playerViewangles[YAW];
-	s_controls.playerLegs		     = LEGS_IDLE;
-	s_controls.playerTorso			 = TORSO_STAND;
+	s_controls.playerLegs		     = BOTH_IDLE;
+	s_controls.playerTorso			 = BOTH_IDLE;
 	s_controls.playerWeapon			 = -1;
 	s_controls.playerChat			 = qfalse;
 
 	switch( anim ) {
 	case ANIM_RUN:	
-		s_controls.playerLegs = LEGS_RUN;
+		s_controls.playerLegs = BOTH_RUN;
 		break;
 
 	case ANIM_WALK:	
-		s_controls.playerLegs = LEGS_WALK;
+		s_controls.playerLegs = BOTH_RUN;
 		break;
 
 	case ANIM_BACK:	
-		s_controls.playerLegs = LEGS_BACK;
+		s_controls.playerLegs = BOTH_RUN_BACK;
 		break;
 
 	case ANIM_JUMP:	
-		s_controls.playerLegs = LEGS_JUMP;
+		s_controls.playerLegs = BOTH_JUMP;
 		break;
 
-	case ANIM_CROUCH:	
-		s_controls.playerLegs = LEGS_IDLECR;
-		break;
+	// case ANIM_CROUCH:	
+	// 	s_controls.playerLegs = LEGS_IDLECR;
+	// 	break;
 
 	case ANIM_TURNLEFT:
 		s_controls.playerViewangles[YAW] += 90;
@@ -443,12 +447,12 @@ static void Controls_UpdateModel( int anim ) {
 		break;
 
 	case ANIM_STEPLEFT:
-		s_controls.playerLegs = LEGS_WALK;
+		s_controls.playerLegs = BOTH_RUN;
 		s_controls.playerMoveangles[YAW] = s_controls.playerViewangles[YAW] + 90;
 		break;
 
 	case ANIM_STEPRIGHT:
-		s_controls.playerLegs = LEGS_WALK;
+		s_controls.playerLegs = BOTH_RUN;
 		s_controls.playerMoveangles[YAW] = s_controls.playerViewangles[YAW] - 90;
 		break;
 
@@ -501,12 +505,12 @@ static void Controls_UpdateModel( int anim ) {
 		break;
 
 	case ANIM_ATTACK:
-		s_controls.playerTorso = TORSO_ATTACK;
+		s_controls.playerTorso = TORSO_LPUNCH;
 		break;
 
-	case ANIM_GESTURE:
-		s_controls.playerTorso = TORSO_GESTURE;
-		break;
+	//case ANIM_GESTURE:
+	//	s_controls.playerTorso = TORSO_GESTURE;
+	//	break;
 
 	case ANIM_DIE:
 		s_controls.playerLegs = BOTH_DEATH1;

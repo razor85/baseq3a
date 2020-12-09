@@ -149,6 +149,7 @@ void SP_light (gentity_t *self);
 void SP_info_null (gentity_t *self);
 void SP_info_notnull (gentity_t *self);
 void SP_info_camp (gentity_t *self);
+void SP_info_swing_point (gentity_t *self);
 void SP_path_corner (gentity_t *self);
 
 void SP_misc_teleporter_dest (gentity_t *self);
@@ -182,6 +183,7 @@ spawn_t	spawns[] = {
 	{"info_null", SP_info_null},
 	{"info_notnull", SP_info_notnull},		// use target_position instead
 	{"info_camp", SP_info_camp},
+	{"info_swing_point", SP_info_swing_point},
 
 	{"func_plat", SP_func_plat},
 	{"func_button", SP_func_button},
@@ -454,6 +456,18 @@ void G_SpawnGEntityFromSpawnVars( void ) {
 	// if we didn't get a classname, don't bother spawning anything
 	if ( !G_CallSpawn( ent ) ) {
 		G_FreeEntity( ent );
+	} else {
+		// If the spawned entity is a swing point, register it.
+    if (!strcmp(ent->classname, "info_swing_point")) {
+			G_Printf("%d - Registered swing point at %f %f %f\n", level.numSwingPoints, ent->s.origin[0], 
+				ent->s.origin[1], ent->s.origin[2]);
+
+			VectorCopy(ent->s.origin, level.swingPoints[level.numSwingPoints]);
+			level.numSwingPoints++;
+
+			// We don't need the gentity anymore
+      //G_FreeEntity(ent);
+    }
 	}
 }
 
@@ -613,6 +627,7 @@ void G_SpawnEntitiesFromString( void ) {
 	// allow calls to G_Spawn*()
 	level.spawning = qtrue;
 	level.numSpawnVars = 0;
+	level.numSwingPoints = 0;
 
 	// the worldspawn is not an actual entity, but it still
 	// has a "spawn" function to perform any global setup

@@ -1018,6 +1018,7 @@ void ClientSpawn(gentity_t *ent) {
 	// unlagged
 	G_ResetHistory( ent );
 	client->saved.leveltime = 0;
+	client->swingJumpTime = level.time;
 
 	// clear everything but the persistant data
 
@@ -1061,6 +1062,7 @@ void ClientSpawn(gentity_t *ent) {
 	// clear entity values
 	client->ps.stats[STAT_MAX_HEALTH] = client->pers.maxHealth;
 	client->ps.eFlags = flags;
+	client->ps.grapplePulling = qfalse;
 
 	ent->s.groundEntityNum = ENTITYNUM_NONE;
 	ent->client = &level.clients[index];

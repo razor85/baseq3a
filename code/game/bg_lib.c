@@ -562,6 +562,7 @@ double tan( double x ) {
 }
 #endif
 
+#if defined ( Q3_VM )
 
 static int randSeed = 0;
 
@@ -710,7 +711,6 @@ double _atof( const char **stringPtr ) {
 }
 
 
-#if defined ( Q3_VM )
 int atoi( const char *string ) {
 	int		sign;
 	int		value;

@@ -106,8 +106,10 @@ static qboolean	CG_ParseAnimationFile( const char *filename, clientInfo_t *ci ) 
 	ci->footsteps = FOOTSTEP_NORMAL;
 	VectorClear( ci->headOffset );
 	ci->gender = GENDER_MALE;
-	ci->fixedlegs = qfalse;
-	ci->fixedtorso = qfalse;
+	// Nightz - angles should be locked.
+	ci->fixedlegs = qtrue;
+	ci->fixedtorso = qtrue;
+	// End Nightz
 
 	// read optional parameters
 	while ( 1 ) {
@@ -177,6 +179,8 @@ static qboolean	CG_ParseAnimationFile( const char *filename, clientInfo_t *ci ) 
 	for ( i = 0 ; i < MAX_ANIMATIONS ; i++ ) {
 
 		token = COM_Parse( &text_p );
+		// Nightz - TODO: Not sure what this is for.
+		/*
 		if ( !token[0] ) {
 			if( i >= TORSO_GETFLAG && i <= TORSO_NEGATIVE ) {
 				animations[i].firstFrame = animations[TORSO_GESTURE].firstFrame;
@@ -190,14 +194,18 @@ static qboolean	CG_ParseAnimationFile( const char *filename, clientInfo_t *ci ) 
 			}
 			break;
 		}
+		*/
 		animations[i].firstFrame = atoi( token );
 		// leg only frames are adjusted to not count the upper body only frames
+		/*
 		if ( i == LEGS_WALKCR ) {
 			skip = animations[LEGS_WALKCR].firstFrame - animations[TORSO_GESTURE].firstFrame;
 		}
 		if ( i >= LEGS_WALKCR && i<TORSO_GETFLAG) {
 			animations[i].firstFrame -= skip;
 		}
+		*/
+		// End Nightz
 
 		token = COM_Parse( &text_p );
 		if ( !token[0] ) {
@@ -237,10 +245,13 @@ static qboolean	CG_ParseAnimationFile( const char *filename, clientInfo_t *ci ) 
 	}
 
 	// crouch backward animation
-	memcpy(&animations[LEGS_BACKCR], &animations[LEGS_WALKCR], sizeof(animation_t));
-	animations[LEGS_BACKCR].reversed = qtrue;
+	// Nightz - no crouch.
+	// memcpy(&animations[LEGS_BACKCR], &animations[LEGS_WALKCR], sizeof(animation_t));
+	// animations[LEGS_BACKCR].reversed = qtrue;
+	// End Nightz
+
 	// walk backward animation
-	memcpy(&animations[LEGS_BACKWALK], &animations[LEGS_WALK], sizeof(animation_t));
+	memcpy(&animations[LEGS_BACKWALK], &animations[BOTH_RUN], sizeof(animation_t));
 	animations[LEGS_BACKWALK].reversed = qtrue;
 	// flag moving fast
 	animations[FLAG_RUN].firstFrame = 0;
@@ -1513,7 +1524,7 @@ static void CG_PlayerAnimation( centity_t *cent, int *legsOld, int *legs, float 
 	ci = &cgs.clientinfo[ clientNum ];
 
 	// do the shuffle turn frames locally
-	if ( cent->pe.legs.yawing && ( cent->currentState.legsAnim & ~ANIM_TOGGLEBIT ) == LEGS_IDLE ) {
+	if ( cent->pe.legs.yawing && ( cent->currentState.legsAnim & ~ANIM_TOGGLEBIT ) == BOTH_IDLE ) {
 		CG_RunLerpFrame( ci, &cent->pe.legs, LEGS_TURN, speedScale );
 	} else {
 		CG_RunLerpFrame( ci, &cent->pe.legs, cent->currentState.legsAnim, speedScale );
@@ -1655,9 +1666,8 @@ static void CG_PlayerAngles( centity_t *cent, vec3_t legs[3], vec3_t torso[3], v
 	// --------- yaw -------------
 
 	// allow yaw to drift a bit
-	if ( ( cent->currentState.legsAnim & ~ANIM_TOGGLEBIT ) != LEGS_IDLE 
-		|| ((cent->currentState.torsoAnim & ~ANIM_TOGGLEBIT) != TORSO_STAND 
-		&& (cent->currentState.torsoAnim & ~ANIM_TOGGLEBIT) != TORSO_STAND2)) {
+	if ( ( cent->currentState.legsAnim & ~ANIM_TOGGLEBIT ) != BOTH_IDLE 
+		|| ((cent->currentState.torsoAnim & ~ANIM_TOGGLEBIT) != BOTH_IDLE)) {
 		// if not standing still, always point all in the same direction
 		cent->pe.torso.yawing = qtrue;	// always center
 		cent->pe.torso.pitching = qtrue;	// always center
@@ -1678,8 +1688,10 @@ static void CG_PlayerAngles( centity_t *cent, vec3_t legs[3], vec3_t torso[3], v
 	torsoAngles[YAW] = headAngles[YAW] + 0.25 * movementOffsets[ dir ];
 
 	// torso
-	CG_SwingAngles( torsoAngles[YAW], 25, 90, cg_swingSpeed.value, &cent->pe.torso.yawAngle, &cent->pe.torso.yawing );
+	// Nightz - Torso angle should be the same as legs.
+	CG_SwingAngles( torsoAngles[YAW], 40, 90, cg_swingSpeed.value, &cent->pe.torso.yawAngle, &cent->pe.torso.yawing );
 	CG_SwingAngles( legsAngles[YAW], 40, 90, cg_swingSpeed.value, &cent->pe.legs.yawAngle, &cent->pe.legs.yawing );
+	// End Nightz
 
 	torsoAngles[YAW] = cent->pe.torso.yawAngle;
 	legsAngles[YAW] = cent->pe.legs.yawAngle;
@@ -1693,8 +1705,9 @@ static void CG_PlayerAngles( centity_t *cent, vec3_t legs[3], vec3_t torso[3], v
 	} else {
 		dest = headAngles[PITCH] * 0.75f;
 	}
-	CG_SwingAngles( dest, 15, 30, 0.1f, &cent->pe.torso.pitchAngle, &cent->pe.torso.pitching );
-	torsoAngles[PITCH] = cent->pe.torso.pitchAngle;
+	// CG_SwingAngles( dest, 15, 30, 0.1f, &cent->pe.torso.pitchAngle, &cent->pe.torso.pitching );
+	// torsoAngles[PITCH] = cent->pe.torso.pitchAngle;
+	torsoAngles[PITCH] = 0;
 
 	//
 	clientNum = cent->currentState.clientNum;
@@ -1764,7 +1777,7 @@ static void CG_HasteTrail( centity_t *cent ) {
 		return;
 	}
 	anim = cent->pe.legs.animationNumber & ~ANIM_TOGGLEBIT;
-	if ( anim != LEGS_RUN && anim != LEGS_BACK ) {
+	if ( anim != BOTH_RUN && anim != BOTH_RUN_BACK ) {
 		return;
 	}
 
@@ -1937,9 +1950,9 @@ static void CG_PlayerFlag( centity_t *cent, qhandle_t hSkin, refEntity_t *torso 
 
 	updateangles = qfalse;
 	legsAnim = cent->currentState.legsAnim & ~ANIM_TOGGLEBIT;
-	if( legsAnim == LEGS_IDLE || legsAnim == LEGS_IDLECR ) {
+	if ( legsAnim == BOTH_IDLE ) {
 		flagAnim = FLAG_STAND;
-	} else if ( legsAnim == LEGS_WALK || legsAnim == LEGS_WALKCR ) {
+	} else if ( legsAnim == BOTH_RUN || legsAnim == BOTH_RUN_BACK ) {
 		flagAnim = FLAG_STAND;
 		updateangles = qtrue;
 	} else {
@@ -2861,6 +2874,13 @@ void CG_Player( centity_t *cent ) {
 	head.shadowPlane = shadowPlane;
 	head.renderfx = renderfx;
 
+	// Draw web swing.
+	refEntity_t tmpRefEntity;
+  CG_PositionRotatedEntityOnTag(&tmpRefEntity, &torso, ci->torsoModel, "tag_rhand");
+  CG_PositionRotatedEntityOnTag(&tmpRefEntity, &torso, ci->torsoModel, "tag_lhand");
+	VectorCopy(tmpRefEntity.origin, ci->tag_rhand);
+	VectorCopy(tmpRefEntity.origin, ci->tag_lhand);
+
 	// colored skin
 	if ( darken ) {
 		head.shaderRGBA[0] = 85;
@@ -2884,7 +2904,9 @@ void CG_Player( centity_t *cent ) {
 	//
 	// add the gun / barrel / flash
 	//
-	CG_AddPlayerWeapon( &torso, NULL, cent, ci->team );
+	// Nightz - No weapon models.
+	// CG_AddPlayerWeapon( &torso, NULL, cent, ci->team );
+	// End Nightz
 
 	// add powerups floating behind the player
 	CG_PlayerPowerups( cent, &torso );

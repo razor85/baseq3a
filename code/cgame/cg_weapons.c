@@ -545,20 +545,22 @@ CG_GrappleTrail
 ==========================
 */
 void CG_GrappleTrail( centity_t *ent, const weaponInfo_t *wi ) {
-	vec3_t	origin;
-	entityState_t	*es;
-	vec3_t			forward, up;
 	refEntity_t		beam;
+	memset( &beam, 0, sizeof( beam ) );
 
-	es = &ent->currentState;
+	entityState_t	*es = &ent->currentState;
 
-	BG_EvaluateTrajectory( &es->pos, cg.time, origin );
+	vec3_t	origin;
+  BG_EvaluateTrajectory(&es->pos, cg.time, origin);
 	ent->trailTime = cg.time;
 
-	memset( &beam, 0, sizeof( beam ) );
-	//FIXME adjust for muzzle position
-	VectorCopy ( cg_entities[ ent->currentState.otherEntityNum ].lerpOrigin, beam.origin );
+	// Nightz - Not Needed
+	/*
+	// FIXME adjust for muzzle position
+  VectorCopy(cg_entities[ent->currentState.otherEntityNum].lerpOrigin, beam.origin);
 	beam.origin[2] += 26;
+	
+	vec3_t forward, up;
 	AngleVectors( cg_entities[ ent->currentState.otherEntityNum ].lerpAngles, forward, NULL, up );
 	VectorMA( beam.origin, -6, up, beam.origin );
 	VectorCopy( origin, beam.oldorigin );
@@ -574,7 +576,23 @@ void CG_GrappleTrail( centity_t *ent, const weaponInfo_t *wi ) {
 	beam.shaderRGBA[1] = 0xff;
 	beam.shaderRGBA[2] = 0xff;
 	beam.shaderRGBA[3] = 0xff;
-	trap_R_AddRefEntityToScene( &beam );
+	*/
+
+	
+  clientInfo_t* ci = &cgs.clientinfo[ent->currentState.otherEntityNum];
+	VectorCopy(origin, beam.origin);
+	VectorCopy(ci->tag_lhand, beam.oldorigin);
+	
+	beam.reType = RT_LIGHTNING;
+	beam.customShader = cgs.media.lightningShader;
+
+  AxisClear(beam.axis);
+	beam.shaderRGBA[0] = 0xff;
+	beam.shaderRGBA[1] = 0xff;
+	beam.shaderRGBA[2] = 0xff;
+	beam.shaderRGBA[3] = 0xff;
+
+  trap_R_AddRefEntityToScene(&beam);
 }
 
 /*
@@ -686,15 +704,18 @@ void CG_RegisterWeapon( int weaponNum ) {
 		break;
 
 	case WP_GRAPPLING_HOOK:
-		MAKERGB( weaponInfo->flashDlightColor, 0.6f, 0.6f, 1.0f );
+		//MAKERGB( weaponInfo->flashDlightColor, 0.6f, 0.6f, 1.0f );
+		MAKERGB( weaponInfo->flashDlightColor, 0, 0, 0 );
 		weaponInfo->missileModel = trap_R_RegisterModel( "models/ammo/rocket/rocket.md3" );
 		weaponInfo->missileTrailFunc = CG_GrappleTrail;
 		weaponInfo->missileDlight = HOOK_GLOW_RADIUS;
+		weaponInfo->missileDlight = 0;
 		weaponInfo->wiTrailTime = 2000;
-		weaponInfo->trailRadius = 64;
+		weaponInfo->trailRadius = 10;
+		cgs.media.lightningShader = trap_R_RegisterShader( "lightningBoltNew");
 		MAKERGB( weaponInfo->missileDlightColor, 1, 0.75f, 0 );
-		weaponInfo->readySound = trap_S_RegisterSound( "sound/weapons/melee/fsthum.wav", qfalse );
-		weaponInfo->firingSound = trap_S_RegisterSound( "sound/weapons/melee/fstrun.wav", qfalse );
+		//weaponInfo->readySound = trap_S_RegisterSound( "sound/weapons/melee/fsthum.wav", qfalse );
+		//weaponInfo->firingSound = trap_S_RegisterSound( "sound/weapons/melee/fstrun.wav", qfalse );
 		break;
 
 #ifdef MISSIONPACK
@@ -902,6 +923,7 @@ CG_MapTorsoToWeaponFrame
 static int CG_MapTorsoToWeaponFrame( const clientInfo_t *ci, int frame ) {
 
 	// change weapon
+	/*
 	if ( frame >= ci->animations[TORSO_DROP].firstFrame 
 		&& frame < ci->animations[TORSO_DROP].firstFrame + 9 ) {
 		return frame - ci->animations[TORSO_DROP].firstFrame + 6;
@@ -918,6 +940,7 @@ static int CG_MapTorsoToWeaponFrame( const clientInfo_t *ci, int frame ) {
 		&& frame < ci->animations[TORSO_ATTACK2].firstFrame + 6 ) {
 		return 1 + frame - ci->animations[TORSO_ATTACK2].firstFrame;
 	}
+	*/
 	
 	return 0;
 }
@@ -1008,11 +1031,13 @@ static void CG_LightningBolt( centity_t *cent, vec3_t origin ) {
 		directView = qfalse;
 		VectorCopy( cent->lerpOrigin, muzzlePoint );
 		anim = cent->currentState.legsAnim & ~ANIM_TOGGLEBIT;
-		if ( anim == LEGS_WALKCR || anim == LEGS_IDLECR ) {
-			muzzlePoint[2] += CROUCH_VIEWHEIGHT;
-		} else {
+		// Nightz - no crouch
+		// if ( anim == LEGS_WALKCR || anim == LEGS_IDLECR ) {
+		// 	muzzlePoint[2] += CROUCH_VIEWHEIGHT;
+		// } else {
 			muzzlePoint[2] += DEFAULT_VIEWHEIGHT;
-		}
+		//}
+		// End Nightz
 	}
 
 	// CPMA  "true" lightning
@@ -2330,11 +2355,13 @@ static qboolean	CG_CalcMuzzlePoint( int entityNum, vec3_t muzzle ) {
 
 	AngleVectors( cent->currentState.apos.trBase, forward, NULL, NULL );
 	anim = cent->currentState.legsAnim & ~ANIM_TOGGLEBIT;
-	if ( anim == LEGS_WALKCR || anim == LEGS_IDLECR ) {
-		muzzle[2] += CROUCH_VIEWHEIGHT;
-	} else {
+	// Nightz - no crouch
+	// if ( anim == LEGS_WALKCR || anim == LEGS_IDLECR ) {
+	// 	muzzle[2] += CROUCH_VIEWHEIGHT;
+	// } else {
 		muzzle[2] += DEFAULT_VIEWHEIGHT;
-	}
+	// }
+	// End Nightz
 
 	VectorMA( muzzle, 14, forward, muzzle );
 
