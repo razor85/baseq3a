@@ -146,7 +146,7 @@ typedef struct {
 
 
 typedef struct {
-	lerpFrame_t		legs, torso, flag;
+	lerpFrame_t		legs, flag;
 	int				painTime;
 	int				painDirection;	// flip from 0 to 1
 	qboolean		painIgnore;
@@ -354,26 +354,16 @@ typedef struct {
 	// gameplay
 	char			modelName[MAX_QPATH];
 	char			skinName[MAX_QPATH];
-	char			headModelName[MAX_QPATH];
-	char			headSkinName[MAX_QPATH];
 	qboolean		deferred;
 
 	qboolean		newAnims;		// true if using the new mission pack animations
-	qboolean		fixedlegs;		// true if legs yaw is always the same as torso yaw
-	qboolean		fixedtorso;		// true if torso never changes yaw
+	qboolean		fixedlegs;
 
-	vec3_t			headOffset;		// move head in icon views
-	footstep_t		footsteps;
+	footstep_t	footsteps;
 	gender_t		gender;			// from model
 
 	qhandle_t		legsModel;
 	qhandle_t		legsSkin;
-
-	qhandle_t		torsoModel;
-	qhandle_t		torsoSkin;
-
-	qhandle_t		headModel;
-	qhandle_t		headSkin;
 
 	qhandle_t		modelIcon;
 
@@ -382,8 +372,6 @@ typedef struct {
 	sfxHandle_t		sounds[MAX_CUSTOM_SOUNDS];
 
 	qboolean		coloredSkin;
-	vec3_t			headColor;
-	vec3_t			bodyColor;
 	vec3_t			legsColor;
 
 	// Nightz - Auxiliary
@@ -1387,7 +1375,6 @@ extern  char teamChat2[256];
 void CG_AddLagometerFrameInfo( void );
 void CG_AddLagometerSnapshotInfo( snapshot_t *snap );
 void CG_CenterPrint( const char *str, int y, int charWidth );
-void CG_DrawHead( float x, float y, float w, float h, int clientNum, vec3_t headAngles );
 void CG_DrawActive( stereoFrame_t stereoView );
 void CG_DrawFlagModel( float x, float y, float w, float h, int team, qboolean force2D );
 void CG_DrawTeamBackground( int x, int y, int w, int h, float alpha, int team );
@@ -1480,8 +1467,6 @@ void CG_Bullet( vec3_t origin, int sourceEntityNum, vec3_t normal, qboolean fles
 
 void CG_RailTrail( const clientInfo_t *ci, const vec3_t start, const vec3_t end );
 void CG_GrappleTrail( centity_t *ent, const weaponInfo_t *wi );
-void CG_AddViewWeapon (playerState_t *ps);
-void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent, int team );
 void CG_DrawWeaponSelect( void );
 
 void CG_OutOfAmmoChange( void );	// should this be in pmove?

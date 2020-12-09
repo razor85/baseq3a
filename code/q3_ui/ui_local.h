@@ -465,13 +465,6 @@ typedef struct {
 	qhandle_t		legsSkin;
 	lerpFrame_t		legs;
 
-	qhandle_t		torsoModel;
-	qhandle_t		torsoSkin;
-	lerpFrame_t		torso;
-
-	qhandle_t		headModel;
-	qhandle_t		headSkin;
-
 	animation_t		animations[MAX_ANIMATIONS];
 
 	qhandle_t		weaponModel;
@@ -485,7 +478,6 @@ typedef struct {
 	vec3_t			moveAngles;
 	weapon_t		currentWeapon;
 	int				legsAnim;
-	int				torsoAnim;
 
 	// animation vars
 	weapon_t		weapon;
@@ -493,9 +485,6 @@ typedef struct {
 	weapon_t		pendingWeapon;
 	int				weaponTimer;
 	int				pendingLegsAnim;
-	int				torsoAnimationTimer;
-
-	int				pendingTorsoAnim;
 	int				legsAnimationTimer;
 
 	qboolean		chat;
@@ -510,7 +499,7 @@ typedef struct {
 
 void UI_DrawPlayer( float x, float y, float w, float h, playerInfo_t *pi, int time );
 void UI_PlayerInfo_SetModel( playerInfo_t *pi, const char *model );
-void UI_PlayerInfo_SetInfo( playerInfo_t *pi, int legsAnim, int torsoAnim, vec3_t viewAngles, vec3_t moveAngles, weapon_t weaponNum, qboolean chat );
+void UI_PlayerInfo_SetInfo( playerInfo_t *pi, int legsAnim, vec3_t viewAngles, vec3_t moveAngles, weapon_t weaponNum, qboolean chat );
 qboolean UI_RegisterClientModelname( playerInfo_t *pi, const char *modelSkinName );
 
 //

@@ -124,7 +124,6 @@ typedef struct aas_entityinfo_s
 	int		powerups;		// bit flags
 	int		weapon;			// determines weapon and flash model, etc
 	int		legsAnim;		// mask off ANIM_TOGGLEBIT
-	int		torsoAnim;		// mask off ANIM_TOGGLEBIT
 } aas_entityinfo_t;
 
 // area info

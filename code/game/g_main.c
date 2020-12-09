@@ -1063,8 +1063,7 @@ void MoveClientToIntermission( gentity_t *ent ) {
 	ent->s.event = 0;
 	ent->r.contents = 0;
 
-	ent->s.legsAnim = LEGS_IDLE;
-	ent->s.torsoAnim = TORSO_STAND;
+	ent->s.legsAnim = BOTH_IDLE;
 }
 
 

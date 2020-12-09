@@ -130,17 +130,6 @@ static void CG_DrawClientScore( int y, score_t *score, float *color, float fade,
 		}
 	}
 
-	// draw the face
-	VectorClear( headAngles );
-	headAngles[YAW] = 180;
-	if( largeFormat ) {
-		CG_DrawHead( headx, y - ( ICON_SIZE - BIGCHAR_HEIGHT ) / 2, ICON_SIZE, ICON_SIZE, 
-			score->client, headAngles );
-	}
-	else {
-		CG_DrawHead( headx, y, 16, 16, score->client, headAngles );
-	}
-
 #ifdef MISSIONPACK
 	// draw the team task
 	if ( ci->teamTask != TEAMTASK_NONE ) {

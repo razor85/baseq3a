@@ -364,24 +364,6 @@ void CopyToBodyQue( gentity_t *ent ) {
 	}
 	body->s.event = 0;
 
-	// change the animation to the last-frame only, so the sequence
-	// doesn't repeat anew for the body
-	switch ( body->s.legsAnim & ~ANIM_TOGGLEBIT ) {
-	case BOTH_DEATH1:
-	case BOTH_DEAD1:
-		body->s.torsoAnim = body->s.legsAnim = BOTH_DEAD1;
-		break;
-	case BOTH_DEATH2:
-	case BOTH_DEAD2:
-		body->s.torsoAnim = body->s.legsAnim = BOTH_DEAD2;
-		break;
-	case BOTH_DEATH3:
-	case BOTH_DEAD3:
-	default:
-		body->s.torsoAnim = body->s.legsAnim = BOTH_DEAD3;
-		break;
-	}
-
 	body->r.svFlags = ent->r.svFlags;
 	VectorCopy (ent->r.mins, body->r.mins);
 	VectorCopy (ent->r.maxs, body->r.maxs);
@@ -582,7 +564,6 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	int		teamTask, teamLeader, health;
 	char	*s;
 	char	model[MAX_QPATH];
-	char	headModel[MAX_QPATH];
 	char	oldname[MAX_NETNAME];
 	gclient_t	*client;
 	char	c1[8];
@@ -684,7 +665,6 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 
 	// set model
 	Q_strncpyz( model, Info_ValueForKey( userinfo, "model" ), sizeof( model ) );
-	Q_strncpyz( headModel, Info_ValueForKey( userinfo, "headmodel" ), sizeof( headModel ) );
 
 	// team task (0 = none, 1 = offence, 2 = defence)
 	teamTask = atoi(Info_ValueForKey(userinfo, "teamtask"));
@@ -699,12 +679,12 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	// print scoreboards, display models, and play custom sounds
 	if ( ent->r.svFlags & SVF_BOT ) {
 		s = va("n\\%s\\t\\%i\\model\\%s\\hmodel\\%s\\c1\\%s\\c2\\%s\\hc\\%i\\w\\%i\\l\\%i\\skill\\%s\\tt\\%d\\tl\\%d",
-			client->pers.netname, client->sess.sessionTeam, model, headModel, c1, c2,
+			client->pers.netname, client->sess.sessionTeam, model, NULL, c1, c2,
 			client->pers.maxHealth, client->sess.wins, client->sess.losses,
 			Info_ValueForKey( userinfo, "skill" ), teamTask, teamLeader );
 	} else {
 		s = va("n\\%s\\t\\%i\\model\\%s\\hmodel\\%s\\c1\\%s\\c2\\%s\\hc\\%i\\w\\%i\\l\\%i\\tt\\%d\\tl\\%d",
-			client->pers.netname, client->sess.sessionTeam, model, headModel, c1, c2, 
+			client->pers.netname, client->sess.sessionTeam, model, NULL, c1, c2, 
 			client->pers.maxHealth, client->sess.wins, client->sess.losses, teamTask, teamLeader );
 	}
 
@@ -1128,8 +1108,7 @@ void ClientSpawn(gentity_t *ent) {
 	client->latched_buttons = 0;
 
 	// set default animations
-	client->ps.torsoAnim = TORSO_STAND;
-	client->ps.legsAnim = LEGS_IDLE;
+	client->ps.legsAnim = BOTH_IDLE;
 
 	if ( level.intermissiontime ) {
 		MoveClientToIntermission( ent );

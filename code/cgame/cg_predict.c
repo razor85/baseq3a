@@ -699,17 +699,7 @@ static int CG_IsUnacceptableError( playerState_t *ps, playerState_t *pps, qboole
 	}
 
 	// forward gesture animation
-	/*
-	if ( pps->torsoAnim != ps->torsoAnim && (ps->torsoAnim & ~ANIM_TOGGLEBIT ) == TORSO_GESTURE ) {
-		for ( n = 0 ; n < NUM_SAVED_STATES; n++ ) {
-			cg.savedPmoveStates[ n ].torsoAnim = ps->torsoAnim;
-			cg.savedPmoveStates[ n ].torsoTimer = ps->torsoTimer;
-		}
-	}
-	*/
-
 	if ( pps->legsTimer != ps->legsTimer ||	pps->legsAnim != ps->legsAnim ||
-		pps->torsoTimer != ps->torsoTimer || pps->torsoAnim != ps->torsoAnim ||
 		pps->movementDir != ps->movementDir ) {
 		return 5;
 	}

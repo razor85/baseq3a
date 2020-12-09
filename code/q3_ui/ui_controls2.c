@@ -196,7 +196,6 @@ typedef struct
 	vec3_t				playerViewangles;
 	vec3_t				playerMoveangles;
 	int					playerLegs;
-	int					playerTorso;
 	weapon_t			playerWeapon;
 	qboolean			playerChat;
 
@@ -413,7 +412,6 @@ static void Controls_UpdateModel( int anim ) {
 	s_controls.playerViewangles[YAW] = 180 - 30;
 	s_controls.playerMoveangles[YAW] = s_controls.playerViewangles[YAW];
 	s_controls.playerLegs		     = BOTH_IDLE;
-	s_controls.playerTorso			 = BOTH_IDLE;
 	s_controls.playerWeapon			 = -1;
 	s_controls.playerChat			 = qfalse;
 
@@ -505,7 +503,7 @@ static void Controls_UpdateModel( int anim ) {
 		break;
 
 	case ANIM_ATTACK:
-		s_controls.playerTorso = TORSO_LPUNCH;
+		s_controls.playerLegs = TORSO_LPUNCH;
 		break;
 
 	//case ANIM_GESTURE:
@@ -514,7 +512,6 @@ static void Controls_UpdateModel( int anim ) {
 
 	case ANIM_DIE:
 		s_controls.playerLegs = BOTH_DEATH1;
-		s_controls.playerTorso = BOTH_DEATH1;
 		s_controls.playerWeapon = WP_NONE;
 		break;
 
@@ -526,7 +523,9 @@ static void Controls_UpdateModel( int anim ) {
 		break;
 	}
 
-	UI_PlayerInfo_SetInfo( &s_controls.playerinfo, s_controls.playerLegs, s_controls.playerTorso, s_controls.playerViewangles, s_controls.playerMoveangles, s_controls.playerWeapon, s_controls.playerChat );
+	UI_PlayerInfo_SetInfo( &s_controls.playerinfo, s_controls.playerLegs, 
+		s_controls.playerViewangles, s_controls.playerMoveangles, 
+		s_controls.playerWeapon, s_controls.playerChat );
 }
 
 

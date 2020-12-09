@@ -70,18 +70,6 @@ void PM_AddTouchEnt( int entityNum ) {
 	pm->numtouch++;
 }
 
-/*
-===================
-PM_StartTorsoAnim
-===================
-*/
-static void PM_StartTorsoAnim( int anim ) {
-	if ( pm->ps->pm_type >= PM_DEAD ) {
-		return;
-	}
-	pm->ps->torsoAnim = ( ( pm->ps->torsoAnim & ANIM_TOGGLEBIT ) ^ ANIM_TOGGLEBIT )
-		| anim;
-}
 static void PM_StartLegsAnim( int anim ) {
 	if ( pm->ps->pm_type >= PM_DEAD ) {
 		return;
@@ -103,16 +91,6 @@ static void PM_ContinueLegsAnim( int anim ) {
 	PM_StartLegsAnim( anim );
 }
 
-static void PM_ContinueTorsoAnim( int anim ) {
-	if ( ( pm->ps->torsoAnim & ~ANIM_TOGGLEBIT ) == anim ) {
-		return;
-	}
-	if ( pm->ps->torsoTimer > 0 ) {
-		return;		// a high priority animation is running
-	}
-	PM_StartTorsoAnim( anim );
-}
-
 static void PM_ContinueBothAnim( int anim ) {
 	qboolean doLegs = qtrue;
 	if ( ( pm->ps->legsAnim & ~ANIM_TOGGLEBIT ) == anim ) {
@@ -123,24 +101,11 @@ static void PM_ContinueBothAnim( int anim ) {
 	}
 	if (doLegs)
     PM_StartLegsAnim(anim);
-
-	qboolean doTorso = qtrue;
-	if ( ( pm->ps->torsoAnim & ~ANIM_TOGGLEBIT ) == anim ) {
-		doTorso = qfalse;
-	}
-	if ( pm->ps->torsoTimer > 0 ) {
-		doTorso = qfalse; // a high priority animation is running
-	}
-
-	if (doTorso)
-    PM_StartTorsoAnim(anim);
 }
 
 static void PM_ForceBothAnim( int anim ) {
-	pm->ps->torsoTimer = 0;
 	pm->ps->legsTimer = 0;
 	PM_StartLegsAnim( anim );
-	PM_StartTorsoAnim( anim );
 }
 
 static void PM_ForceLegsAnim( int anim ) {
@@ -1642,7 +1607,6 @@ static void PM_BeginWeaponChange( int weapon ) {
 	PM_AddEvent( EV_CHANGE_WEAPON );
 	pm->ps->weaponstate = WEAPON_DROPPING;
 	pm->ps->weaponTime += 200;
-	// PM_StartTorsoAnim( TORSO_DROP );
 }
 
 
@@ -1667,29 +1631,7 @@ static void PM_FinishWeaponChange( void ) {
 	pm->ps->weaponstate = WEAPON_RAISING;
 	pm->ps->eFlags &= ~EF_FIRING;
 	pm->ps->weaponTime += 250;
-	// PM_StartTorsoAnim( TORSO_RAISE );
 }
-
-
-/*
-==============
-PM_TorsoAnimation
-
-==============
-*/
-static void PM_TorsoAnimation( void ) {
-	/*
-	if ( pm->ps->weaponstate == WEAPON_READY ) {
-		if ( pm->ps->weapon == WP_GAUNTLET ) {
-			PM_ContinueTorsoAnim( TORSO_STAND2 );
-		} else {
-			PM_ContinueTorsoAnim( TORSO_STAND );
-		}
-		return;
-	}
-	*/
-}
-
 
 /*
 ==============
@@ -1761,13 +1703,6 @@ static void PM_Weapon( void ) {
 
 	if ( pm->ps->weaponstate == WEAPON_RAISING ) {
 		pm->ps->weaponstate = WEAPON_READY;
-		/*
-		if ( pm->ps->weapon == WP_GAUNTLET ) {
-			PM_StartTorsoAnim( TORSO_STAND2 );
-		} else {
-			PM_StartTorsoAnim( TORSO_STAND );
-		}
-		*/
 		return;
 	}
 
@@ -1786,11 +1721,6 @@ static void PM_Weapon( void ) {
 			pm->ps->weaponstate = WEAPON_READY;
 			return;
 		}
-		/*
-		PM_StartTorsoAnim( TORSO_ATTACK2 );
-	} else {
-		PM_StartTorsoAnim( TORSO_ATTACK );
-		*/
 	}
 
 	pm->ps->weaponstate = WEAPON_FIRING;
@@ -1879,47 +1809,6 @@ PM_Animate
 */
 
 static void PM_Animate( void ) {
-	/*
-	if ( pm->cmd.buttons & BUTTON_GESTURE ) {
-		if ( pm->ps->torsoTimer == 0 ) {
-			PM_StartTorsoAnim( TORSO_GESTURE );
-			pm->ps->torsoTimer = TIMER_GESTURE;
-			PM_AddEvent( EV_TAUNT );
-		}
-#ifdef MISSIONPACK
-	} else if ( pm->cmd.buttons & BUTTON_GETFLAG ) {
-		if ( pm->ps->torsoTimer == 0 ) {
-			PM_StartTorsoAnim( TORSO_GETFLAG );
-			pm->ps->torsoTimer = 600;	//TIMER_GESTURE;
-		}
-	} else if ( pm->cmd.buttons & BUTTON_GUARDBASE ) {
-		if ( pm->ps->torsoTimer == 0 ) {
-			PM_StartTorsoAnim( TORSO_GUARDBASE );
-			pm->ps->torsoTimer = 600;	//TIMER_GESTURE;
-		}
-	} else if ( pm->cmd.buttons & BUTTON_PATROL ) {
-		if ( pm->ps->torsoTimer == 0 ) {
-			PM_StartTorsoAnim( TORSO_PATROL );
-			pm->ps->torsoTimer = 600;	//TIMER_GESTURE;
-		}
-	} else if ( pm->cmd.buttons & BUTTON_FOLLOWME ) {
-		if ( pm->ps->torsoTimer == 0 ) {
-			PM_StartTorsoAnim( TORSO_FOLLOWME );
-			pm->ps->torsoTimer = 600;	//TIMER_GESTURE;
-		}
-	} else if ( pm->cmd.buttons & BUTTON_AFFIRMATIVE ) {
-		if ( pm->ps->torsoTimer == 0 ) {
-			PM_StartTorsoAnim( TORSO_AFFIRMATIVE);
-			pm->ps->torsoTimer = 600;	//TIMER_GESTURE;
-		}
-	} else if ( pm->cmd.buttons & BUTTON_NEGATIVE ) {
-		if ( pm->ps->torsoTimer == 0 ) {
-			PM_StartTorsoAnim( TORSO_NEGATIVE );
-			pm->ps->torsoTimer = 600;	//TIMER_GESTURE;
-		}
-#endif
-	}
-	*/
 }
 
 
@@ -1944,13 +1833,6 @@ static void PM_DropTimers( void ) {
 		pm->ps->legsTimer -= pml.msec;
 		if ( pm->ps->legsTimer < 0 ) {
 			pm->ps->legsTimer = 0;
-		}
-	}
-
-	if ( pm->ps->torsoTimer > 0 ) {
-		pm->ps->torsoTimer -= pml.msec;
-		if ( pm->ps->torsoTimer < 0 ) {
-			pm->ps->torsoTimer = 0;
 		}
 	}
 }
@@ -2175,9 +2057,6 @@ void PmoveSingle (pmove_t *pmove) {
 
 	// weapons
 	PM_Weapon();
-
-	// torso animation
-	PM_TorsoAnimation();
 
 	// footstep events / legs animations
 	PM_Footsteps();

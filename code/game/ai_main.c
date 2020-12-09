@@ -1534,7 +1534,6 @@ int BotAIStartFrame(int time) {
 			state.eventParm = ent->s.eventParm;
 			state.powerups = ent->s.powerups;
 			state.legsAnim = ent->s.legsAnim;
-			state.torsoAnim = ent->s.torsoAnim;
 			state.weapon = ent->s.weapon;
 			//
 			*s = qfalse;

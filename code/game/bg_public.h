@@ -31,7 +31,8 @@
 
 #define	DROPPED_TIME		30000   // 30 seconds before removing  dropped items
 
-#define	MINS_Z				-24
+//#define	MINS_Z				-24
+#define	MINS_Z				0
 #define	DEFAULT_VIEWHEIGHT	26
 #define CROUCH_VIEWHEIGHT	12
 #define	DEAD_VIEWHEIGHT		-16
@@ -474,63 +475,6 @@ typedef enum {
 	GTS_TEAMS_ARE_TIED,
 	GTS_KAMIKAZE
 } global_team_sound_t;
-
-// animations
-/*
-typedef enum {
-	BOTH_DEATH1,
-	BOTH_DEAD1,
-	BOTH_DEATH2,
-	BOTH_DEAD2,
-	BOTH_DEATH3,
-	BOTH_DEAD3,
-
-	TORSO_GESTURE,
-
-	TORSO_ATTACK,
-	TORSO_ATTACK2,
-
-	TORSO_DROP,
-	TORSO_RAISE,
-
-	TORSO_STAND,
-	TORSO_STAND2,
-
-	LEGS_WALKCR,
-	LEGS_WALK,
-	LEGS_RUN,
-	LEGS_BACK,
-	LEGS_SWIM,
-
-	LEGS_JUMP,
-	LEGS_LAND,
-
-	LEGS_JUMPB,
-	LEGS_LANDB,
-
-	LEGS_IDLE,
-	LEGS_IDLECR,
-
-	LEGS_TURN,
-
-	TORSO_GETFLAG,
-	TORSO_GUARDBASE,
-	TORSO_PATROL,
-	TORSO_FOLLOWME,
-	TORSO_AFFIRMATIVE,
-	TORSO_NEGATIVE,
-
-	MAX_ANIMATIONS,
-
-	LEGS_BACKCR,
-	LEGS_BACKWALK,
-	FLAG_RUN,
-	FLAG_STAND,
-	FLAG_STAND2RUN,
-
-	MAX_TOTALANIMATIONS
-} animNumber_t;
-*/
 
 // Nightz - Spiderman animations
 typedef enum {
